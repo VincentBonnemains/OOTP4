@@ -24,6 +24,10 @@
  */
 package simbad.demo;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.media.j3d.Transform3D;
 import javax.vecmath.Color3f;
 import javax.vecmath.Vector3d;
 import javax.vecmath.Vector3f;
@@ -110,14 +114,14 @@ public class DemoTp4 extends Demo {
         c2.rotate90(1);
         
         //Pastilles
-        PastilleAgent p1 = new PastilleAgent(new Vector3d(0, 0.02, -6.4), new Color3f(0,0.74f,0), "demarrage", 0.25f, 30);
+       /* PastilleAgent p1 = new PastilleAgent(new Vector3d(0, 0.02, -6.4), new Color3f(0,0.74f,0), "demarrage", 0.25f, 30);
         add(p1);
         
         PastilleAgent p2 = new PastilleAgent(new Vector3d(3.95, 0.02, 0.05), new Color3f(0.9f,0.88f,0.14f), "demarrage", 0.25f, 30);
         add(p2);
         
         PastilleAgent p3 = new PastilleAgent(new Vector3d(-3.95, 0.02, 4.05), new Color3f(0.9f,0.88f,0.14f), "demarrage", 0.25f, 30);
-        add(p3);
+        add(p3);*/
         
         //zones
         	//repos
@@ -139,18 +143,70 @@ public class DemoTp4 extends Demo {
         add(new Robot(new Vector3d(0, 0, 0), "robot 1")); 
         
         //Parcours
-        Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.9f),this, new Color3f(0.f,0.f,0.f));
-        add(pBas);
-        Box  pHaut = new Box(new Vector3d(-3.95,0.01,2.1),new Vector3f(0.2f,0,16.9f),this, new Color3f(0.f,0.f,0.f));
-        add(pHaut);
-        Box  pGauche = new Box(new Vector3d(0,0.01,10.6),new Vector3f(8.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
-        add(pGauche);
-        Box  pDroit = new Box(new Vector3d(0,0.01,-6.4),new Vector3f(8.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
-        add(pDroit);
+        //Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.9f),this, new Color3f(0.f,0.f,0.f));
+       // Box  pHaut = new Box(new Vector3d(-3.95,0.01,2.1),new Vector3f(0.2f,0,16.9f),this, new Color3f(0.f,0.f,0.f));
+        //Box  pGauche = new Box(new Vector3d(0,0.01,10.6),new Vector3f(8.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));        
+        //Box  pDroit = new Box(new Vector3d(0,0.01,-6.4),new Vector3f(8.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
+        
+        
+        Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.2f),this, new Color3f(0.f,0.f,0.f));
+        Box  pHaut = new Box(new Vector3d(-3.95,0.01,2.1),new Vector3f(0.2f,0,16.2f),this, new Color3f(0.f,0.f,0.f));
+        Box  pGauche = new Box(new Vector3d(0,0.01,10.6),new Vector3f(7.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
+        Box  pDroit = new Box(new Vector3d(0,0.01,-6.4),new Vector3f(7.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
         Box  interGauche = new Box(new Vector3d(-1.1,0.01,4.05),new Vector3f(5.5f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
-        add(interGauche);
         Box  interDroit = new Box(new Vector3d(1.1,0.01,0.05),new Vector3f(5.5f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
+        
+        
+        add(pBas);        
+        add(pHaut);       
+        add(pGauche);        
+        add(pDroit);       
+        add(interGauche);        
         add(interDroit);
+
+        
+        genererCoins();
+    }
+    
+    private class Point {
+    	public double x,y;
+    	public Point(double x, double y) {
+    		this.x = x;
+    		this.y = y;
+    	}
+    }
+    
+    private void genererCoins() {
+    	
+    	List<Point> centres = new ArrayList<Point>();
+    	
+    	centres.add(new Point(3.6,-6.05));
+    	centres.add(new Point(-3.6,-6.05));    	
+    	centres.add(new Point(-3.6,10.25));
+    	centres.add(new Point(3.6,10.25));
+    	
+    	double r = 0.35;
+    	
+    	double pas = 0.01;
+    	
+    	double x,y;
+    	
+    	double borne = Math.PI/2; 
+    	
+    	for(Point p : centres) {    		
+    		for(double alpha=-borne+Math.PI/2; alpha>-borne; alpha -= pas){
+        		x = p.x + r * Math.cos(alpha);
+        		y = p.y + r * Math.sin(alpha);
+        		Box tmp = new Box(new Vector3d(x,0.01,y),new Vector3f(0.2f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
+        		/*double[] t = {pas,0.0,0.0};
+        		Transform3D tr = new Transform3D(t);
+        		tmp.getRotationTransform(tr);*/
+        		add(tmp);
+        	}
+    		borne = borne + Math.PI/2;
+    	}
+    	
+    	
     }
 
 }
