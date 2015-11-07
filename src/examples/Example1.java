@@ -1,12 +1,13 @@
 package examples;
 
 
+import javax.vecmath.Vector3d;
+import javax.vecmath.Vector3f;
+
 import simbad.demo.DemoTp4;
 import simbad.gui.Simbad;
 import simbad.sim.*;
 
-import javax.vecmath.Vector3d;
-import javax.vecmath.Vector3f;
 
 
 /**
@@ -56,7 +57,7 @@ public class Example1 {
     static public class MyEnv extends EnvironmentDescription {
         public MyEnv() {
             light1IsOn = true;
-            light2IsOn = false;
+            light2IsOn = true;
             Wall w1 = new Wall(new Vector3d(9, 0, 0), 19, 1, this);
             w1.rotate90(1);
             add(w1);
