@@ -54,6 +54,30 @@ public class RobotFactory extends Factory {
         agent.addSensorDevice(camera, pos, 0);
         return camera;
     }
+    
+    /**
+     * Adds a prebuild camera belt sensor to the agent. Image resolution is 100x100 pixels.
+     * Camera is situated on the top of the agent.
+     * @param agent
+     * @return the sensor object
+     */
+    static public CameraSensor[] addCameraBeltSensor(Agent agent, CameraSensor[] cameras) {
+        double agentHeight = agent.getHeight();
+        float cameraBodyRadius = 0.04f;
+        
+        int nbSensors = 8;
+        
+        for(int i=0;i<nbSensors;i++) {
+        	cameras[i] = new CameraSensor(cameraBodyRadius, 20, 100);
+        	cameras[i].setUpdatePerSecond(3);
+        	cameras[i].setName("Camera "+i);
+        	
+        	Vector3d pos = new Vector3d(0.4, (agentHeight / 2) + (cameraBodyRadius * 3) / 4, -(nbSensors/2)*0.15 + i*0.15);
+        	
+        	agent.addSensorDevice(cameras[i], pos, 0);
+        }
+        return cameras;
+    }
 
     
 
