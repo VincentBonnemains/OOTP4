@@ -38,6 +38,8 @@ import simbad.sim.Arch;
 import simbad.sim.Box;
 import simbad.sim.CameraSensor;
 import simbad.sim.EnvironmentDescription;
+import simbad.sim.KinematicModel;
+import simbad.sim.LightSensor;
 import simbad.sim.PastilleAgent;
 import simbad.sim.RangeSensorBelt;
 import simbad.sim.RobotFactory;
@@ -48,38 +50,35 @@ import simbad.sim.Wall;
  * The Base class for all demos.
  */
 public class DemoTp4 extends Demo {
-    
-	public class Robot extends Agent {
-        RangeSensorBelt sonars;
-        CameraSensor camera;
-        public Robot (Vector3d position, String name) {     
-            super(position,name);
-            // Add sensors
-            camera = RobotFactory.addCameraSensor(this);
-            RobotFactory.addBumperBeltSensor(this);
-           // Add sonars and get corresponding object.
-           sonars  = RobotFactory.addSonarBeltSensor(this);
-          
+	
+	class Robot extends Agent {
+        LightSensor sensorLeft;
+        LightSensor sensorRight;
+
+        public Robot(Vector3d position, String name) {
+            super(position, name);
+            
+            sensorLeft = RobotFactory.addLightSensorLeft(this);
+            sensorRight = RobotFactory.addLightSensorRight(this);
         }
         
-        /** Initialize Agent's Behavior*/
+
+        /** Initialize Agent's Behavior */
         public void initBehavior() {
-            // nothing particular in this case
+        	this.rotateY(-(Math.PI/2));
         }
-        
+
         /** Perform one step of Agent's Behavior */
         public void performBehavior() {
-
-          
+         
                 // progress at 0.5 m/s
                 setTranslationalVelocity(0.5);
-                // frequently change orientation 
-                if ((getCounter() % 100)==0) setRotationalVelocity(Math.PI/2 * (0.5 - Math.random()));
-            
-            // print front sonar every 100 frames
-            if(getCounter() %100==0)
-                System.out.println("Sonar num 0  = "+sonars.getMeasurement(0));
-           
+                // turn towards light
+                float llum = sensorLeft.getAverageLuminance();
+                float rlum = sensorRight.getAverageLuminance();
+                //setRotationalVelocity((llum - rlum) *  Math.PI);
+                setRotationalVelocity((llum - rlum) *  Math.PI/4);
+                if (collisionDetected()) moveToStartPosition();
         }
     }
     public DemoTp4() {
@@ -114,14 +113,14 @@ public class DemoTp4 extends Demo {
         c2.rotate90(1);
         
         //Pastilles
-       /* PastilleAgent p1 = new PastilleAgent(new Vector3d(0, 0.02, -6.4), new Color3f(0,0.74f,0), "demarrage", 0.25f, 30);
+        PastilleAgent p1 = new PastilleAgent(new Vector3d(0, 0.02, -6.4), new Color3f(0,0.74f,0), "demarrage", 0.25f, 30);
         add(p1);
         
         PastilleAgent p2 = new PastilleAgent(new Vector3d(3.95, 0.02, 0.05), new Color3f(0.9f,0.88f,0.14f), "demarrage", 0.25f, 30);
         add(p2);
         
         PastilleAgent p3 = new PastilleAgent(new Vector3d(-3.95, 0.02, 4.05), new Color3f(0.9f,0.88f,0.14f), "demarrage", 0.25f, 30);
-        add(p3);*/
+        add(p3);
         
         //zones
         	//repos
@@ -140,15 +139,8 @@ public class DemoTp4 extends Demo {
         	//usinage 2
         Box  zUsine2 = new Box(new Vector3d(0,0.01,6.85),new Vector3f(3.3f,0,2.5f),this, new Color3f(255.f,255.f,255.f));
         add(zUsine2);
-        add(new Robot(new Vector3d(0, 0, 0), "robot 1")); 
         
         //Parcours
-        //Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.9f),this, new Color3f(0.f,0.f,0.f));
-       // Box  pHaut = new Box(new Vector3d(-3.95,0.01,2.1),new Vector3f(0.2f,0,16.9f),this, new Color3f(0.f,0.f,0.f));
-        //Box  pGauche = new Box(new Vector3d(0,0.01,10.6),new Vector3f(8.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));        
-        //Box  pDroit = new Box(new Vector3d(0,0.01,-6.4),new Vector3f(8.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
-        
-        
         Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.2f),this, new Color3f(0.f,0.f,0.f));
         Box  pHaut = new Box(new Vector3d(-3.95,0.01,2.1),new Vector3f(0.2f,0,16.2f),this, new Color3f(0.f,0.f,0.f));
         Box  pGauche = new Box(new Vector3d(0,0.01,10.6),new Vector3f(7.1f,0,0.2f),this, new Color3f(0.f,0.f,0.f));
@@ -166,6 +158,28 @@ public class DemoTp4 extends Demo {
 
         
         genererCoins();
+        
+        //Creations pièces
+        //petites
+        Box pp1 = new Box(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        add(pp1);
+        Box pp2 = new Box(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        add(pp2);
+        Box pp3 = new Box(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        add(pp3);
+        
+      //grandes
+        Box gp1 = new Box(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        add(gp1);
+        Box gp2 = new Box(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        add(gp2);
+        Box gp3 = new Box(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        add(gp3);
+
+        
+        Robot rob = new Robot(new Vector3d(0,0.1,-11), "robot 1");
+        add(rob);
+        
     }
     
     private class Point {

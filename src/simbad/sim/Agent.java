@@ -106,6 +106,8 @@ public class Agent extends SimpleAgent {
 
     }
     
+    //public void 
+    
     /** Resets agent variables  */
     protected void reset(){
         super.reset();
