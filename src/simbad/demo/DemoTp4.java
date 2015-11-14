@@ -163,7 +163,7 @@ public class DemoTp4 extends Demo {
     public DemoTp4() {
         light1IsOn = true;
         light2IsOn = true;
-        setWorldSize(15);
+        setWorldSize(25);
         //Contours : wb = mur bas;wh = mur haut;md = mur droite; mg = mur gauche
         Wall wb = new Wall(new Vector3d(6.25, 0, 0), 25, 2, this);
         wb.rotate90(1);
