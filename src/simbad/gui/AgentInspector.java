@@ -85,7 +85,7 @@ public class AgentInspector extends JInternalFrame implements Runnable {
         for (int i =0 ; i< sensors.size();i++){
             SensorDevice sd = (SensorDevice)sensors.get(i);
             if (sd == null) continue;
-            JPanel sdpanel =sd.createInspectorPanel();
+            JPanel sdpanel =sd.createInspectorPanel();            
             if (sdpanel != null){
                 JPanel p =  new JPanel();
                 p.setLayout(new BoxLayout(p,BoxLayout.PAGE_AXIS));

@@ -191,8 +191,7 @@ public class Agent extends SimpleAgent {
         angularVelocity.set(0,0,0);
         
         
-        kinematicModel
-                .update(dt, rotation, instantTranslation, instantRotation);
+        kinematicModel.update(dt, rotation, instantTranslation, instantRotation);
         // derive two times  displacement to obtain acceleration
         double scale =  1.0 /(dt*dt);// dt non zero
         motorsLinearAcceleration.set(instantTranslation);
