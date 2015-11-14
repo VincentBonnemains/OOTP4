@@ -218,7 +218,6 @@ public class DemoTp4 extends Demo {
         	//usinage 2
         Box  zUsine2 = new Box(new Vector3d(0,0.01,6.85),new Vector3f(3.3f,0,2.5f),this, new Color3f(255.f,255.f,255.f));
         add(zUsine2);
-        add(new Robot(new Vector3d(0,0.1,-11), "robot 1"));
         
         
         Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.2f),this, new Color3f(0.f,0.f,0.f));
@@ -253,6 +252,7 @@ public class DemoTp4 extends Demo {
         Box gp3 = new Box(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
         add(gp3);
 
+        add(new Robot(new Vector3d(0,0.1,-11), "robot 1"));
         
         genererCoins();
     }
