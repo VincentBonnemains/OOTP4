@@ -49,6 +49,7 @@ import simbad.sim.DifferentialKinematic;
 import simbad.sim.EnvironmentDescription;
 import simbad.sim.LightSensor;
 import simbad.sim.PastilleAgent;
+import simbad.sim.Piece;
 import simbad.sim.RangeSensorBelt;
 import simbad.sim.RobotFactory;
 import simbad.sim.SensorMatrix;
@@ -60,10 +61,12 @@ import simbad.sim.Wall;
  * The Base class for all demos.
  */
 public class DemoTp4 extends Demo {
-    
+	Piece[] petites_pieces = new Piece[3];
+	Piece[] grandes_pieces = new Piece[3];
 	class Robot extends Agent {
 		double elapsed;
 		Point3d position,current_position;
+		ArrayList<Piece> sac = new ArrayList();
 		
 		CameraSensor[] sensors = new CameraSensor[8]; //LIgne de capteurs frontaux
 		BufferedImage[] bufferedMatrices = new BufferedImage[8];
@@ -137,9 +140,10 @@ public class DemoTp4 extends Demo {
 
         /** Perform one step of Agent's Behavior */
         public void performBehavior() {
-        	
                 kinematic.setWheelsVelocity(3.3,3.3);
-                
+                getCoords(current_position);
+                deplacerObjets();
+                getCoords(position);
                 // display every second a binarized representation of camera image.
                 if ((getLifeTime() - elapsed) > 1) {
                 	getCoords(current_position);
@@ -158,7 +162,26 @@ public class DemoTp4 extends Demo {
                 
                 if (collisionDetected()) kinematic.setWheelsVelocity(0.0,0.0);
         }
+        
+        public void ramasser(Piece b){
+        	Point3d p = new Point3d();
+        	b.getCoords(p);
+        	b.moveToPosition(new Vector3d(p.x,p.y+1,p.z));
+			sac.add(b);
+	}
+	
+		public void deplacerObjets(){
+			Piece b;
+			Point3d p = new Point3d();
+			for(int i = 0;i < sac.size();++i){
+				b = sac.get(i);
+				b.translateTo(new Vector3d(current_position.x-position.x,0,current_position.z-position.z));
+			}
+			
+		}
     }
+	
+	
 	
     public DemoTp4() {
         light1IsOn = true;
@@ -237,23 +260,30 @@ public class DemoTp4 extends Demo {
         
         //Creations pièces
         //petites
-        Box pp1 = new Box(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        Piece pp1 = new Piece(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp1);
-        Box pp2 = new Box(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        petites_pieces[0] = pp1;
+        Piece pp2 = new Piece(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp2);
-        Box pp3 = new Box(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        petites_pieces[1] = pp1;
+        Piece pp3 = new Piece(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp3);
+        petites_pieces[2] = pp1;
         
       //grandes
-        Box gp1 = new Box(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        Piece gp1 = new Piece(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp1);
-        Box gp2 = new Box(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        grandes_pieces[0] = gp1;
+        Piece gp2 = new Piece(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp2);
-        Box gp3 = new Box(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        grandes_pieces[1] = gp2;
+        Piece gp3 = new Piece(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp3);
-
-        add(new Robot(new Vector3d(0,0.1,-11), "robot 1"));
+        grandes_pieces[2] = gp3;
         
+        Robot r2d2 = new Robot(new Vector3d(0,0.1,-11), "robot 1");
+        add(r2d2);
+        //r2d2.ramasser(petites_pieces[0]);
         genererCoins();
     }
     
