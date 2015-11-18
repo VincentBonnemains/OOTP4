@@ -63,18 +63,27 @@ public class RobotFactory extends Factory {
      */
     static public CameraSensor[] addCameraBeltSensor(Agent agent, CameraSensor[] cameras) {
         double agentHeight = agent.getHeight();
-        float cameraBodyRadius = 0.04f;
+        float cameraBodyRadius = 0.06f;
         
-        int nbSensors = 8;
+        int nbSensors = 3;
         
         for(int i=0;i<nbSensors;i++) {
-        	cameras[i] = new CameraSensor(cameraBodyRadius, 20, 100);
-        	cameras[i].setUpdatePerSecond(3);
+        	cameras[i] = new CameraSensor(cameraBodyRadius, 100, 100);
+        	cameras[i].setUpdatePerSecond(30);
         	cameras[i].setName("Camera "+i);
+        	cameras[i].rotateX(3*Math.PI/2);
+        	//Vector3d pos = new Vector3d(0.6, (agentHeight / 16)+ (cameraBodyRadius * 3) / 4 , -(nbSensors/2)*0.15 + i*0.15);
         	
-        	Vector3d pos = new Vector3d(0.4, (agentHeight / 2) + (cameraBodyRadius * 3) / 4, -(nbSensors/2)*0.15 + i*0.15);
         	
-        	agent.addSensorDevice(cameras[i], pos, 0);
+        }
+        Vector3d devant = new Vector3d(0.3, (agentHeight / 4),0);
+        Vector3d gauche = new Vector3d(0, (agentHeight / 4),-0.5);
+        Vector3d droite = new Vector3d(0, (agentHeight / 4),0.5);
+        
+    	agent.addSensorDevice(cameras[0], gauche, 0);
+    	agent.addSensorDevice(cameras[1], devant, 0);
+    	agent.addSensorDevice(cameras[2], droite, 0);
+        for(int i=0;i<nbSensors;i++) {
         }
         return cameras;
     }

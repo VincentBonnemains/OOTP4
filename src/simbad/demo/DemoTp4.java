@@ -31,7 +31,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.media.j3d.Transform3D;
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
 import javax.vecmath.Color3f;
@@ -62,28 +61,41 @@ import simbad.sim.Wall;
 public class DemoTp4 extends Demo {
     
 	class Robot extends Agent {
+		final int GAUCHE=0,DROITE=1,NOIR=1,VERT=2,BLANC=3,JAUNE=4;
+		int compteurPivotGauche=0,compteurPivotDroit=0;
 		double elapsed;
-		Point3d position,current_position;
 		
-		CameraSensor[] sensors = new CameraSensor[8]; //LIgne de capteurs frontaux
-		BufferedImage[] bufferedMatrices = new BufferedImage[8];
+		double ANGLE = 0;
+		
+		double VMAX = 0.7;
+		double VMIN = 0.2;
+		double VITESSE = VMAX;
+		double wl=VMAX,wr=VMAX;
+		Point3d position,current_position;
+		int nbCameraSensors = 3;
+		public boolean retrouverChemin = false;
+		
+		CameraSensor[] sensors = new CameraSensor[nbCameraSensors]; //LIgne de capteurs frontaux
+		BufferedImage[] bufferedMatrices = new BufferedImage[nbCameraSensors];
+		double[] lines;
 		RangeSensorBelt rangeSensor;
 		
-		DifferentialKinematic kinematic;
+		//DifferentialKinematic kinematic;
 		
 		JPanel panel;
         JInternalFrame window;
-		
+        
         public Robot(Vector3d position, String name) {
             super(position, name);
+            lines = new double[nbCameraSensors];
             sensors = RobotFactory.addCameraBeltSensor(this,sensors);
             rangeSensor = RobotFactory.addSonarBeltSensor(this);
-            kinematic = RobotFactory.setDifferentialDriveKinematicModel(this);
+            // = RobotFactory.setDifferentialDriveKinematicModel(this);
             this.position = new Point3d();
             this.current_position = new Point3d();
             // prepare a buffer for storing image
             for(int i=0;i<bufferedMatrices.length;i++){
-            	bufferedMatrices[i] = sensors[i].createCompatibleImage();            	
+            	bufferedMatrices[i] = sensors[i].createCompatibleImage();
             }
             // Prepare UI panel for image display
             panel = new ImagerPanel();
@@ -122,7 +134,6 @@ public class DemoTp4 extends Demo {
 	                    }
 	                }
                 }
-
             }
         }
         
@@ -132,18 +143,25 @@ public class DemoTp4 extends Demo {
         	elapsed = getLifeTime();
         	getCoords(current_position);
         	getCoords(position);
-        	this.rotateY(-Math.PI/2);
+        	//this.rotateY(-Math.PI/2);
         }
 
+        double tic = 0.02;
         /** Perform one step of Agent's Behavior */
         public void performBehavior() {
         	
-                kinematic.setWheelsVelocity(3.3,3.3);
-                
-                // display every second a binarized representation of camera image.
-                if ((getLifeTime() - elapsed) > 1) {
+                //kinematic.setWheelsVelocity(wl,wr);
+	        	
+                if ((getLifeTime() - elapsed) > tic) {
+                	setTranslationalVelocity(VITESSE);
+    	            setRotationalVelocity(ANGLE);
+    	            
+    	            suiviDeLigne();
+                	
+                	
                 	getCoords(current_position);
-                    double distance = Math.sqrt(Math.pow((current_position.x - position.x), 2) + Math.pow((current_position.z - position.z), 2));
+                	
+                    //double distance = Math.sqrt(Math.pow((current_position.x - position.x), 2) + Math.pow((current_position.z - position.z), 2));
 
                 	elapsed = getLifeTime();
                 	for(int i=0;i<sensors.length;i++) {
@@ -151,19 +169,100 @@ public class DemoTp4 extends Demo {
                     }
                 	panel.repaint();
                 	//System.out.println(rangeSensor.getFrontLeftQuadrantMeasurement());//Distance devant
-                	System.out.println("Distance en 1s: en dm " + distance);
-                	getCoords(position);// = current_position;
-                	System.out.println(current_position + " " + position );
+                	//	getCoords(position);// = current_position;
+                	//System.out.println(current_position + " " + position );
                 }
                 
-                if (collisionDetected()) kinematic.setWheelsVelocity(0.0,0.0);
+                if (collisionDetected())// kinematic.setWheelsVelocity(0.0,0.0);
+                	setTranslationalVelocity(0);
         }
+        
+        
+    	int balayage = 1;
+    	int bmax =1;
+    	double compteurblanc = 0.0;
+    	double compteurnoir  = 0.0;
+    	double coef = 8;
+    	int sens = 1;
+    	int COULEURS[] = new int[nbCameraSensors];
+        public void suiviDeLigne() {
+        	/* cptr et cptl normalisé entre 0 et 1 */
+        	/* 
+        	 * proche de 0 = peu de noir
+        	 * proche de 1 = beaucoup de noir
+        	 */
+        	
+        	   	
+        	
+        	for(int i=0;i<COULEURS.length;i++){
+        		COULEURS[i] = colorDetectedBySensor(bufferedMatrices[i]);
+        	}
+        	
+        	
+        	if(COULEURS[1] == NOIR) {
+    			System.out.println("NOIR");
+    			VITESSE = VMAX;
+    			ANGLE   = 0.0;
+    			compteurblanc = 0;
+    			coef = 4;
+        	}
+        	if(COULEURS[1] == JAUNE) {
+    			System.out.println("JAUNE");
+    			VITESSE = 0;
+    			ANGLE   = Math.PI/2;
+    			compteurblanc = 0;
+    			coef = 4;
+        	} 
+        	if(COULEURS[1] == BLANC) {
+        			System.out.println("BLANC");
+        			VITESSE = 0.0;
+        			if (compteurblanc > 25*tic) {
+        				compteurblanc = 0;
+        				coef = coef/2;
+        				sens = -sens;        				
+        			}
+        			ANGLE = sens*Math.PI/coef;
+        	} 
+        	
+        	compteurblanc += tic;
+
+        	
+        	/*for(int i=0;i<3;i++)
+        		System.out.print(COULEURS[i]+" ");
+        	System.out.println();*/
+        }
+        
+        public int colorDetectedBySensor(BufferedImage sensor) {
+        	int w = sensor.getWidth();
+        	int h = sensor.getHeight();
+
+        	for(int y=0;y<h;y++){
+    			for(int x=0;x<w;x++){
+    				int color = sensor.getRGB(x, y);
+                    int red =   (color >> 16) & 0xFF;
+                    int green = (color >>  8) & 0xFF;
+                    int blue =  (color      ) & 0xFF;
+                    
+                    if(red > 230 && green > 230 && blue < 150){ //Jaune détecté
+                    	return JAUNE;
+                    } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
+                    	return VERT;
+                    } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
+                    	return NOIR;
+                    } else if(red > 200 && green > 200 && blue > 200){ //BLANC détecté
+                    	return BLANC;
+                    }  
+                    
+        		}
+    		}
+			return -1;
+        }        
     }
 	
     public DemoTp4() {
         light1IsOn = true;
         light2IsOn = true;
-        setWorldSize(15);
+        setWorldSize(25);
         //Contours : wb = mur bas;wh = mur haut;md = mur droite; mg = mur gauche
         Wall wb = new Wall(new Vector3d(6.25, 0, 0), 25, 2, this);
         wb.rotate90(1);
@@ -218,7 +317,6 @@ public class DemoTp4 extends Demo {
         	//usinage 2
         Box  zUsine2 = new Box(new Vector3d(0,0.01,6.85),new Vector3f(3.3f,0,2.5f),this, new Color3f(255.f,255.f,255.f));
         add(zUsine2);
-        add(new Robot(new Vector3d(0,0.1,-11), "robot 1"));
         
         
         Box  pBas = new Box(new Vector3d(3.95,0.01,2.1),new Vector3f(0.2f,0,16.2f),this, new Color3f(0.f,0.f,0.f));
@@ -235,7 +333,25 @@ public class DemoTp4 extends Demo {
         add(pDroit);       
         add(interGauche);        
         add(interDroit);
+        
+        //Creations pièces
+        //petites
+        Box pp1 = new Box(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        add(pp1);
+        Box pp2 = new Box(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        add(pp2);
+        Box pp3 = new Box(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),this, new Color3f(1f,0.4f,0.f));
+        add(pp3);
+        
+      //grandes
+        Box gp1 = new Box(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        add(gp1);
+        Box gp2 = new Box(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        add(gp2);
+        Box gp3 = new Box(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),this, new Color3f(0.6f,0.6f,0.6f));
+        add(gp3);
 
+        add(new Robot(new Vector3d(0,0.1,-6.2), "robot 1"));
         
         genererCoins();
     }
@@ -250,7 +366,7 @@ public class DemoTp4 extends Demo {
     
     private void genererCoins() {
     	
-    	List<Point> centres = new ArrayList<>();
+    	List<Point> centres = new ArrayList<Point>();
     	
     	centres.add(new Point(3.6,-6.05));
     	centres.add(new Point(-3.6,-6.05));    	
@@ -280,5 +396,4 @@ public class DemoTp4 extends Demo {
     	
     	
     }
-
 }
