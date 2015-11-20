@@ -29,6 +29,8 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import javax.swing.JInternalFrame;
@@ -56,9 +58,10 @@ public class DemoTp4 extends Demo {
 	Piece[] petites_pieces = new Piece[3];
 	Piece[] grandes_pieces = new Piece[3];
 	class Robot extends Agent {
-		final int GAUCHE=0,DROITE=1,NOIR=1,VERT=2,BLANC=3,JAUNE=4;
+		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3;
 		int compteurPivotGauche=0,compteurPivotDroit=0;
 		double elapsed;
+		
 
 		Point3d position,current_position;
 		ArrayList<Piece> sac = new ArrayList<>();
@@ -69,7 +72,12 @@ public class DemoTp4 extends Demo {
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
 		double wl=VMAX,wr=VMAX;
-		int nbCameraSensors = 3;
+		double compteurblanc = 0.0;
+    	double coef = 8;
+    	int sens = 1;
+    	int nbColors = 5;
+    	int nbCameraSensors = 3;
+		ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		public boolean retrouverChemin = false;
 		
 		CameraSensor[] sensors = new CameraSensor[nbCameraSensors]; //LIgne de capteurs frontaux
@@ -99,7 +107,17 @@ public class DemoTp4 extends Demo {
             Dimension dim = new Dimension(bufferedMatrices[0].getWidth()*bufferedMatrices.length, bufferedMatrices[0].getHeight());
             panel.setPreferredSize(dim);
             panel.setMinimumSize(dim);
-            setUIPanel(panel);  
+            setUIPanel(panel);
+            //Machine a etat variable
+            this.etat = REPOSTOCHEMIN;
+    		this.ramassePetitouGrand = 0;
+    		this.resteGrand = true;
+    		this.restePetit = true;
+    		this.aRamasse = false;
+    		this.plein = false;
+    		boolean t[] = new boolean[nbColors];
+    		for(int i=0;i<nbColors;i++)
+    			COULEURS.add(t);
         }
         
         class ImagerPanel extends JPanel {
@@ -140,30 +158,40 @@ public class DemoTp4 extends Demo {
         	elapsed = getLifeTime();
         	getCoords(current_position);
         	getCoords(position);
-        	//this.rotateY(-Math.PI/2);
+        	this.rotateY(-Math.PI/2);
         }
 
         double tic = 0.02;
         /** Perform one step of Agent's Behavior */
-        public void performBehavior() {        	
+        public void performBehavior() {
+        	
             if ((getLifeTime() - elapsed) > tic) {
+	            getCoords(current_position);
+
             	setTranslationalVelocity(VITESSE);
 	            setRotationalVelocity(ANGLE);
 	            
-	            suiviDeLigne();
+	            
+	            machineAEtat();
+	            
             	
             	
-	            getCoords(current_position);
+	            /*getCoords(current_position);
 	            deplacerObjets();
-	            getCoords(position);            
+	            getCoords(position); */           
             	
 
-            	elapsed = getLifeTime();
+	            /* Mettre à jour les capteurs */
             	for(int i=0;i<sensors.length;i++) {
-                	sensors[i].copyVisionImage(bufferedMatrices[i]);                        
+                	sensors[i].copyVisionImage(bufferedMatrices[i]);
+                	COULEURS.set(i, colorDetectedBySensor(bufferedMatrices[i]));
                 }
             	panel.repaint();
+            	/*******************************/
+            	getCoords(position);
+            	elapsed = getLifeTime();
             }
+            
             
             if (collisionDetected()){
             	setTranslationalVelocity(0);
@@ -171,57 +199,37 @@ public class DemoTp4 extends Demo {
         }
         
         
-    	int balayage = 1;
-    	int bmax =1;
-    	double compteurblanc = 0.0;
-    	double compteurnoir  = 0.0;
-    	double coef = 8;
-    	int sens = 1;
-    	int COULEURS[] = new int[nbCameraSensors];
+    	
     	
         public void suiviDeLigne() {
-        	for(int i=0;i<COULEURS.length;i++){
-        		COULEURS[i] = colorDetectedBySensor(bufferedMatrices[i]);
-        	}
+        	boolean[] T = COULEURS.get(1);
         	
-        	
-        	if(COULEURS[1] == NOIR) {
-    			System.out.println("NOIR");
+        	if(T[NOIR]) {
     			VITESSE = VMAX;
     			ANGLE   = 0.0;
     			compteurblanc = 0;
     			coef = 4;
         	}
-        	if(COULEURS[1] == JAUNE) {
-    			System.out.println("JAUNE");
-    			VITESSE = 0;
-    			ANGLE   = Math.PI/2;
-    			compteurblanc = 0;
-    			coef = 4;
-        	} 
-        	if(COULEURS[1] == BLANC) {
-        			System.out.println("BLANC");
-        			VITESSE = 0.0;
-        			if (compteurblanc > 25*tic) {
-        				compteurblanc = 0;
-        				coef = coef/2;
-        				sens = -sens;        				
-        			}
-        			ANGLE = sens*Math.PI/coef;
-        	} 
+        	else {
+    			VITESSE = 0.0;
+    			if (compteurblanc > 25*tic) {
+    				compteurblanc = 0;
+    				coef = coef/2;
+    				sens = -sens;        				
+    			}
+    			ANGLE = sens*Math.PI/coef;
+        	}
         	
         	compteurblanc += tic;
 
-        	
-        	/*for(int i=0;i<3;i++)
-        		System.out.print(COULEURS[i]+" ");
-        	System.out.println();*/
         }
         
-        public int colorDetectedBySensor(BufferedImage sensor) {
+        public boolean[] colorDetectedBySensor(BufferedImage sensor) {
+        	/* Renvoyer plutôt une liste de toute les couleurs présentes dans le capteur et utiliser contains après */
         	int w = sensor.getWidth();
         	int h = sensor.getHeight();
-
+        	boolean[] couleurs = new boolean[4];
+        	
         	for(int y=0;y<h;y++){
     			for(int x=0;x<w;x++){
     				int color = sensor.getRGB(x, y);
@@ -230,18 +238,18 @@ public class DemoTp4 extends Demo {
                     int blue =  (color      ) & 0xFF;
                     
                     if(red > 230 && green > 230 && blue < 150){ //Jaune détecté
-                    	return JAUNE;
+                    	couleurs[JAUNE] = true;
                     } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
-                    	return VERT;
+                    	couleurs[VERT] = true;
                     } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
-                    	return NOIR;
+                    	couleurs[NOIR] = true;
                     } else if(red > 200 && green > 200 && blue > 200){ //BLANC détecté
-                    	return BLANC;
+                    	couleurs[BLANC] = true;
                     }  
                     
         		}
     		}
-			return -1;
+			return couleurs;
         }        
 
         public void ramasser(Piece b){
@@ -260,7 +268,196 @@ public class DemoTp4 extends Demo {
 			}
 			
 		}
-    }
+    
+		/*
+		 * 
+		 * MACHINE A ETAT
+		 * 
+		 */
+		int etat,ramassePetitouGrand;
+		boolean resteGrand,restePetit,aRamasse,plein;
+		private final static int REPOSTOCHEMIN = 0;
+		private final static int RECHERCHEPASTILLEJAUNE = 1;
+		private final static int RECHERCHEPIECE = 2;
+		private final static int RAMASSE = 3;
+		private final static int RECHERCHEPASTILLEVERTE = 4;
+		private final static int CHEMINTOREPOS = 5;
+		private final static int DEPOSE = 6;
+		private final static int FIN = 7;
+		
+		public void machineAEtat(){
+			switch(etat){
+				case REPOSTOCHEMIN:				reposToChemin();			break;
+				case RECHERCHEPASTILLEJAUNE:	recherchePastilleJaune();	break;
+				case RECHERCHEPIECE:			rechercherPiece();			break;
+				case RAMASSE:					ramasse();					break;
+				case RECHERCHEPASTILLEVERTE:	recherchePastilleVerte();	break;
+				case CHEMINTOREPOS:				cheminToRepos();			break;
+				case DEPOSE:					depose();					break;
+				default:break;
+			}
+		}
+
+
+
+
+		private void depose() {
+			plein = false;
+			if(restePetit){
+				ramassePetitouGrand = 0;
+				etat = REPOSTOCHEMIN;
+			}
+			else if(resteGrand){
+				ramassePetitouGrand =1;
+				etat = REPOSTOCHEMIN;
+			}
+			else
+				etat = FIN;
+			
+		}
+
+
+
+
+		private void cheminToRepos() {
+			etat = DEPOSE;
+			
+		}
+
+
+
+
+		private void recherchePastilleVerte() {
+			if(plein)
+				etat = CHEMINTOREPOS;
+			else{
+				if(resteGrand){
+					etat = RECHERCHEPASTILLEJAUNE;
+					aRamasse = false;
+					ramassePetitouGrand = 1;
+				}
+				else
+					etat = CHEMINTOREPOS;
+			}
+			
+		}
+
+
+
+
+		private void ramasse() {
+			aRamasse = true;
+			if(ramassePetitouGrand == 1)
+				plein = true;
+			etat = RECHERCHEPASTILLEJAUNE;
+			
+		}
+
+
+
+
+		private void rechercherPiece() {
+			System.out.println("recherche piece");
+			suiviDeLigne();
+			//etat = RAMASSE;
+		}
+
+
+
+
+		private void recherchePastilleJaune() {
+			boolean T[] = COULEURS.get(1);
+			switch(internalState){
+				case 0:
+					suiviDeLigne();
+					if(T[JAUNE]) {
+						internalState++;
+					}
+				break;
+				case 1:
+					if(roulerPendantDistance(0.3)) {
+						internalState++;
+					}
+				break;
+				case 2:
+					if(aRamasse) {
+						etat = RECHERCHEPASTILLEVERTE;
+					} else {
+						if(pivoter(-Math.PI/4)) {
+							internalState++;							
+						}
+					}
+				break;
+				case 3:
+					if(roulerPendantDistance(0.2)) {
+						internalState = 0;
+						etat = RECHERCHEPIECE;
+					}					
+				break;					
+				default:
+				break;
+			}
+		}
+
+
+
+		int internalState = 0;
+		private void reposToChemin() {
+			boolean T[] = COULEURS.get(1);
+			switch(internalState){
+				case 0: 
+					if(T[VERT]) {
+						internalState++;
+					}
+				break;
+				case 1:
+					if(roulerPendantDistance(0.4)) {
+						internalState++;
+					}
+				break;
+				case 2:
+					if(pivoter(Math.PI/4)) {
+						internalState = 0;
+						etat = RECHERCHEPASTILLEJAUNE;
+					}
+				break;
+			}
+		}
+		
+		boolean roulerPendantDistanceActivated = false;
+		Point3d position_save;
+		private boolean roulerPendantDistance(double distance){
+			if(!roulerPendantDistanceActivated){
+				roulerPendantDistanceActivated = true;
+				position_save = new Point3d(current_position);
+			} else {
+	            double d = Math.sqrt(Math.pow((current_position.x - position_save.x), 2) + Math.pow((current_position.z - position_save.z), 2));
+	            System.out.println(d);
+	            if(d >= distance){
+	            	roulerPendantDistanceActivated = false;
+	            	return true;
+	            }
+			}
+			return false;
+		}
+		
+		public double compteur = 0;
+		public boolean pivoter(double angle) {
+			double alpha = 0.3; //Ya de la latence
+			if(compteur < 1-alpha) {
+				ANGLE = angle;
+				VITESSE = 0;
+				compteur += tic;
+				return false;
+			} else {
+				ANGLE = 0;
+				VITESSE = VMAX;
+				compteur = 0;
+				return true;
+			}
+		}
+	}
+	
 	
 	
 	
@@ -358,7 +555,7 @@ public class DemoTp4 extends Demo {
         add(gp3);
         */
 
-        add(new Robot(new Vector3d(0,0.1,-6.2), "robot 1"));
+        add(new Robot(new Vector3d(0,0.1,-11), "robot 1"));
 
         
         //Creations pièces

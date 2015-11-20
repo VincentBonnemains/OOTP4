@@ -19,7 +19,7 @@ public class StateMachine {
     
     public void transition(){
 		switch(etat){
-		case REPOSTOCHEMIN:		
+		case REPOSTOCHEMIN:
 			etat = RECHERCHEPASTILLEJAUNE;
 			break;
 		case RECHERCHEPASTILLEJAUNE :
