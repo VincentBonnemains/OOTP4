@@ -69,7 +69,7 @@ public class RobotFactory extends Factory {
         
         for(int i=0;i<nbSensors;i++) {
         	cameras[i] = new CameraSensor(cameraBodyRadius, 100, 100);
-        	cameras[i].setUpdatePerSecond(30);
+        	cameras[i].setUpdatePerSecond(100);
         	cameras[i].setName("Camera "+i);
         	cameras[i].rotateX(3*Math.PI/2);
         	//Vector3d pos = new Vector3d(0.6, (agentHeight / 16)+ (cameraBodyRadius * 3) / 4 , -(nbSensors/2)*0.15 + i*0.15);

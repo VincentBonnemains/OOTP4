@@ -60,18 +60,16 @@ public class DemoTp4 extends Demo {
 	class Robot extends Agent {
 		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3;
 		int compteurPivotGauche=0,compteurPivotDroit=0;
-		double elapsed;
-		
+		double elapsed;		
 
 		Point3d position,current_position;
 		ArrayList<Piece> sac = new ArrayList<>();
 		
 		double ANGLE = 0;
 		
-		double VMAX = 0.8;
+		double VMAX = 1;
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
-		double wl=VMAX,wr=VMAX;
 		double compteurblanc = 0.0;
     	double coef = 8;
     	int sens = 1;
@@ -80,22 +78,18 @@ public class DemoTp4 extends Demo {
 		ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		public boolean retrouverChemin = false;
 		
-		CameraSensor[] sensors = new CameraSensor[nbCameraSensors]; //LIgne de capteurs frontaux
+		CameraSensor[] sensors = new CameraSensor[nbCameraSensors];
 		BufferedImage[] bufferedMatrices = new BufferedImage[nbCameraSensors];
-		double[] lines;
 		RangeSensorBelt rangeSensor;
-		
-		//DifferentialKinematic kinematic;
-		
+				
 		JPanel panel;
         JInternalFrame window;
         
         public Robot(Vector3d position, String name) {
             super(position, name);
-            lines = new double[nbCameraSensors];
             sensors = RobotFactory.addCameraBeltSensor(this,sensors);
             rangeSensor = RobotFactory.addSonarBeltSensor(this);
-            // = RobotFactory.setDifferentialDriveKinematicModel(this);
+
             this.position = new Point3d();
             this.current_position = new Point3d();
             // prepare a buffer for storing image
@@ -108,6 +102,7 @@ public class DemoTp4 extends Demo {
             panel.setPreferredSize(dim);
             panel.setMinimumSize(dim);
             setUIPanel(panel);
+            
             //Machine a etat variable
             this.etat = REPOSTOCHEMIN;
     		this.ramassePetitouGrand = 0;
@@ -204,7 +199,8 @@ public class DemoTp4 extends Demo {
         double error = 0;
     	double integral = 0;
     	double derivative = 0;
-    	double kp = 1, ki = 0.01, kd=10;
+    	double big_angle = 0;
+    	double kp = 1, ki = 0.01, kd=10, kb=35*VMAX;
         public void suiviDeLigne() {
         	boolean[] T = COULEURS.get(1);
         	
@@ -213,9 +209,16 @@ public class DemoTp4 extends Demo {
         	derivative = error - lastError;
         	lastError = error;
         	
+        	if(Math.abs(hmin) < 60 && Math.abs(hmin) > 0) {
+        		big_angle = ((Math.PI/16)/100) * hmin;
+        	} else {
+        		big_angle = 0;
+        	}
+        	System.out.println(big_angle);
+        	
         	if(T[NOIR]) {
     			VITESSE = VMAX;
-    			ANGLE   = kp*error + ki*integral + kd*derivative;
+    			ANGLE   = kp*error + ki*integral + kd*derivative + kb*big_angle;
     			compteurblanc = 0;
     			coef = 4;
         	}
@@ -233,6 +236,8 @@ public class DemoTp4 extends Demo {
 
         }
         
+    	int hmin = -1;
+
         public boolean[] colorDetectedBySensor(int i) {
         	/* Renvoyer plutôt une liste de toute les couleurs présentes dans le capteur et utiliser contains après */
         	BufferedImage sensor = bufferedMatrices[i];
@@ -240,9 +245,11 @@ public class DemoTp4 extends Demo {
         	int h = sensor.getHeight();
         	boolean[] couleurs = new boolean[4];
         	
-        	if(i==1){
+        	
+        	if(i==1) {
         		POURCENTAGE_COULEUR[0] = 0;
         		POURCENTAGE_COULEUR[1] = 0;
+        		hmin = -1;
         	}
         	
         	for(int y=0;y<h;y++){
@@ -264,11 +271,20 @@ public class DemoTp4 extends Demo {
                     		}else{
                     			POURCENTAGE_COULEUR[1]++;
                     		}
+                    		if(x==(w-1)) {
+                    			if(y > Math.abs(hmin)){
+                    				hmin=-y;
+                    			}
+                    		}
+                    		if(x==0) {
+                    			if(y > Math.abs(hmin)){
+                    				hmin=y;
+                    			}                    		
+                    		}
                     	}
                     } else if(red > 200 && green > 200 && blue > 200){ //BLANC détecté
                     	couleurs[BLANC] = true;
-                    }  
-                    
+                    }
         		}
     		}
         	if(i == 1) {
