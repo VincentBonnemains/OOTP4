@@ -68,7 +68,7 @@ public class DemoTp4 extends Demo {
 		
 		double ANGLE = 0;
 		
-		double VMAX = 0.7;
+		double VMAX = 0.8;
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
 		double wl=VMAX,wr=VMAX;
@@ -174,7 +174,7 @@ public class DemoTp4 extends Demo {
 	            
 	            machineAEtat();
 	            
-            	
+	            
             	
 	            /*getCoords(current_position);
 	            deplacerObjets();
@@ -184,7 +184,7 @@ public class DemoTp4 extends Demo {
 	            /* Mettre à jour les capteurs */
             	for(int i=0;i<sensors.length;i++) {
                 	sensors[i].copyVisionImage(bufferedMatrices[i]);
-                	COULEURS.set(i, colorDetectedBySensor(bufferedMatrices[i]));
+                	COULEURS.set(i, colorDetectedBySensor(i));                	
                 }
             	panel.repaint();
             	/*******************************/
@@ -198,15 +198,24 @@ public class DemoTp4 extends Demo {
             }
         }
         
-        
-    	
-    	
+        double POURCENTAGE_COULEUR[] = new double[2];
+
+        double lastError = 0;
+        double error = 0;
+    	double integral = 0;
+    	double derivative = 0;
+    	double kp = 1, ki = 0.01, kd=10;
         public void suiviDeLigne() {
         	boolean[] T = COULEURS.get(1);
         	
+        	error = POURCENTAGE_COULEUR[0] - POURCENTAGE_COULEUR[1];
+        	integral = integral + error;
+        	derivative = error - lastError;
+        	lastError = error;
+        	
         	if(T[NOIR]) {
     			VITESSE = VMAX;
-    			ANGLE   = 0.0;
+    			ANGLE   = kp*error + ki*integral + kd*derivative;
     			compteurblanc = 0;
     			coef = 4;
         	}
@@ -224,11 +233,17 @@ public class DemoTp4 extends Demo {
 
         }
         
-        public boolean[] colorDetectedBySensor(BufferedImage sensor) {
+        public boolean[] colorDetectedBySensor(int i) {
         	/* Renvoyer plutôt une liste de toute les couleurs présentes dans le capteur et utiliser contains après */
+        	BufferedImage sensor = bufferedMatrices[i];
         	int w = sensor.getWidth();
         	int h = sensor.getHeight();
         	boolean[] couleurs = new boolean[4];
+        	
+        	if(i==1){
+        		POURCENTAGE_COULEUR[0] = 0;
+        		POURCENTAGE_COULEUR[1] = 0;
+        	}
         	
         	for(int y=0;y<h;y++){
     			for(int x=0;x<w;x++){
@@ -237,18 +252,29 @@ public class DemoTp4 extends Demo {
                     int green = (color >>  8) & 0xFF;
                     int blue =  (color      ) & 0xFF;
                     
-                    if(red > 230 && green > 230 && blue < 150){ //Jaune détecté
+                    if(red > 230 && green > 230 && blue < 120){ //Jaune détecté
                     	couleurs[JAUNE] = true;
                     } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
                     	couleurs[VERT] = true;
                     } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
                     	couleurs[NOIR] = true;
+                    	if(i == 1) {
+                    		if(x < (w/2)){
+                    			POURCENTAGE_COULEUR[0]++;
+                    		}else{
+                    			POURCENTAGE_COULEUR[1]++;
+                    		}
+                    	}
                     } else if(red > 200 && green > 200 && blue > 200){ //BLANC détecté
                     	couleurs[BLANC] = true;
                     }  
                     
         		}
     		}
+        	if(i == 1) {
+    			POURCENTAGE_COULEUR[0] /= w*h;
+    			POURCENTAGE_COULEUR[1] /= w*h;
+        	}
 			return couleurs;
         }        
 
@@ -266,7 +292,6 @@ public class DemoTp4 extends Demo {
 				b = sac.get(i);
 				b.translateTo(new Vector3d(current_position.x-position.x,0,current_position.z-position.z));
 			}
-			
 		}
     
 		/*
@@ -320,7 +345,10 @@ public class DemoTp4 extends Demo {
 
 
 		private void cheminToRepos() {
-			etat = DEPOSE;
+			VITESSE = VMAX;
+			ANGLE   = 0;
+			
+			//etat = DEPOSE;
 			
 		}
 
@@ -328,28 +356,62 @@ public class DemoTp4 extends Demo {
 
 
 		private void recherchePastilleVerte() {
-			if(plein)
-				etat = CHEMINTOREPOS;
-			else{
-				if(resteGrand){
-					etat = RECHERCHEPASTILLEJAUNE;
-					aRamasse = false;
-					ramassePetitouGrand = 1;
-				}
-				else
-					etat = CHEMINTOREPOS;
-			}
-			
+			boolean T[] = COULEURS.get(1);
+			switch(internalState){
+				case 0:
+					suiviDeLigne();
+					if(T[VERT]) {
+						internalState++;
+					}
+				break;
+				case 1:		
+					if(roulerPendantDistance(0.3)) {
+						internalState++;
+					}
+				break;
+				case 2:
+					if(aRamasse || plein) {
+						if(pivoter(-Math.PI/4)) {
+							internalState = 0;
+							etat = CHEMINTOREPOS;
+						}
+					} else if(resteGrand) {
+						if(pivoter(Math.PI/4)) {
+							internalState = 0;							
+							aRamasse = false;
+							ramassePetitouGrand = 1;
+							etat = RECHERCHEPASTILLEJAUNE;
+						}
+					}
+				break;
+			}	
 		}
 
 
 
 
 		private void ramasse() {
-			aRamasse = true;
-			if(ramassePetitouGrand == 1)
+			/*aRamasse = true;
+			if(ramassePetitouGrand == 1) {
 				plein = true;
-			etat = RECHERCHEPASTILLEJAUNE;
+			}
+			*/
+			aRamasse = true;
+			switch(internalState){
+				case 0:
+					if(pivoter(Math.PI/2)) {
+						internalState++;
+					}
+				break;
+				case 1:
+					internalState = 0;
+					etat = RECHERCHEPASTILLEJAUNE;
+				break;
+						
+				default:
+				break;
+			}
+			
 			
 		}
 
@@ -357,9 +419,10 @@ public class DemoTp4 extends Demo {
 
 
 		private void rechercherPiece() {
-			System.out.println("recherche piece");
 			suiviDeLigne();
-			//etat = RAMASSE;
+			if(rangeSensor.getFrontQuadrantMeasurement() < 1) {
+				etat = RAMASSE;
+			}
 		}
 
 
@@ -374,14 +437,16 @@ public class DemoTp4 extends Demo {
 						internalState++;
 					}
 				break;
-				case 1:
+				case 1:		
 					if(roulerPendantDistance(0.3)) {
 						internalState++;
 					}
 				break;
 				case 2:
 					if(aRamasse) {
-						etat = RECHERCHEPASTILLEVERTE;
+						if(pivoter(Math.PI/4)) {
+							internalState++;							
+						}						
 					} else {
 						if(pivoter(-Math.PI/4)) {
 							internalState++;							
@@ -391,7 +456,11 @@ public class DemoTp4 extends Demo {
 				case 3:
 					if(roulerPendantDistance(0.2)) {
 						internalState = 0;
-						etat = RECHERCHEPIECE;
+						if(aRamasse) {
+							etat = RECHERCHEPASTILLEVERTE;
+						} else {
+							etat = RECHERCHEPIECE;
+						}
 					}					
 				break;					
 				default:
@@ -432,7 +501,6 @@ public class DemoTp4 extends Demo {
 				position_save = new Point3d(current_position);
 			} else {
 	            double d = Math.sqrt(Math.pow((current_position.x - position_save.x), 2) + Math.pow((current_position.z - position_save.z), 2));
-	            System.out.println(d);
 	            if(d >= distance){
 	            	roulerPendantDistanceActivated = false;
 	            	return true;
@@ -443,7 +511,7 @@ public class DemoTp4 extends Demo {
 		
 		public double compteur = 0;
 		public boolean pivoter(double angle) {
-			double alpha = 0.3; //Ya de la latence
+			double alpha = 0.2; //Ya de la latence
 			if(compteur < 1-alpha) {
 				ANGLE = angle;
 				VITESSE = 0;
@@ -560,15 +628,17 @@ public class DemoTp4 extends Demo {
         
         //Creations pièces
         //petites
+        
         Piece pp1 = new Piece(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp1);
         petites_pieces[0] = pp1;
         Piece pp2 = new Piece(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp2);
-        petites_pieces[1] = pp1;
+        petites_pieces[1] = pp2;
         Piece pp3 = new Piece(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp3);
-        petites_pieces[2] = pp1;
+        petites_pieces[2] = pp3;
+        
         
       //grandes
         Piece gp1 = new Piece(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
