@@ -49,6 +49,8 @@ import simbad.sim.Piece;
 import simbad.sim.RangeSensorBelt;
 import simbad.sim.RobotFactory;
 import simbad.sim.Wall;
+import utils.ImagerPanel;
+import utils.RobotUtils;
 
 
 /**
@@ -57,17 +59,22 @@ import simbad.sim.Wall;
 public class DemoTp4 extends Demo {
 	Piece[] petites_pieces = new Piece[3];
 	Piece[] grandes_pieces = new Piece[3];
-	class Robot extends Agent {
+	public class Robot extends Agent {
+		/*******************************************************
+		 * ATTRIBUTES ******************************************
+		 *******************************************************/
+		private RobotUtils utils;
 		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3;
 		int compteurPivotGauche=0,compteurPivotDroit=0;
-		double elapsed;		
+		double elapsed;
 
 		Point3d position,current_position;
 		ArrayList<Piece> sac = new ArrayList<>();
-		
+        double tic = 0.02;
+
 		double ANGLE = 0;
 		
-		double VMAX = 1;
+		public double VMAX = 1;
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
 		double compteurblanc = 0.0;
@@ -79,17 +86,22 @@ public class DemoTp4 extends Demo {
 		public boolean retrouverChemin = false;
 		
 		CameraSensor[] sensors = new CameraSensor[nbCameraSensors];
-		BufferedImage[] bufferedMatrices = new BufferedImage[nbCameraSensors];
+		public BufferedImage[] bufferedMatrices = new BufferedImage[nbCameraSensors];
 		RangeSensorBelt rangeSensor;
 				
 		JPanel panel;
         JInternalFrame window;
         
+        /*******************************************************
+         * END ATTRIBUTES **************************************
+         *******************************************************/
+        
+        
         public Robot(Vector3d position, String name) {
             super(position, name);
+            utils = new RobotUtils(this);
             sensors = RobotFactory.addCameraBeltSensor(this,sensors);
             rangeSensor = RobotFactory.addSonarBeltSensor(this);
-
             this.position = new Point3d();
             this.current_position = new Point3d();
             // prepare a buffer for storing image
@@ -97,7 +109,7 @@ public class DemoTp4 extends Demo {
             	bufferedMatrices[i] = sensors[i].createCompatibleImage();
             }
             // Prepare UI panel for image display
-            panel = new ImagerPanel();
+            panel = new ImagerPanel(this);
             Dimension dim = new Dimension(bufferedMatrices[0].getWidth()*bufferedMatrices.length, bufferedMatrices[0].getHeight());
             panel.setPreferredSize(dim);
             panel.setMinimumSize(dim);
@@ -113,39 +125,7 @@ public class DemoTp4 extends Demo {
     		boolean t[] = new boolean[nbColors];
     		for(int i=0;i<nbColors;i++)
     			COULEURS.add(t);
-        }
-        
-        class ImagerPanel extends JPanel {
-
-			private static final long serialVersionUID = 1L;
-
-			protected void paintComponent(Graphics g) {
-                int width = bufferedMatrices[0].getWidth();
-                int height = bufferedMatrices[0].getHeight();
-                super.paintComponent(g);
-                g.setColor(Color.WHITE);
-                g.fillRect(0, 0, width, height);
-                
-                for(int i=0;i<bufferedMatrices.length;i++){
-	                for (int y = 0; y < height; y += 1) {
-	                    for (int x = 0; x < width; x += 1) {
-	                        int color = bufferedMatrices[i].getRGB(x, y);
-	                        //int alpha = (color >> 24) & 0xFF;
-	                        int red =   (color >> 16) & 0xFF;
-	                        int green = (color >>  8) & 0xFF;
-	                        int blue =  (color      ) & 0xFF;
-	                        //System.out.println("R:"+red+" G:"+green+" B:"+blue);
-	                        
-	                        Color c = new Color(red,green,blue);
-	                        g.setColor(c);
-	                        
-	                        g.fillRect(x+i*width, y, 1, 1);
-	                           
-	                    }
-	                }
-                }
-            }
-        }
+        }         
         
 
         /** Initialize Agent's Behavior */
@@ -156,69 +136,41 @@ public class DemoTp4 extends Demo {
         	this.rotateY(-Math.PI/2);
         }
 
-        double tic = 0.02;
         /** Perform one step of Agent's Behavior */
         public void performBehavior() {
         	
             if ((getLifeTime() - elapsed) > tic) {
 	            getCoords(current_position);
-
             	setTranslationalVelocity(VITESSE);
 	            setRotationalVelocity(ANGLE);
-	            
-	            
 	            machineAEtat();
-	            
-	            
             	
 	            /*getCoords(current_position);
 	            deplacerObjets();
 	            getCoords(position); */           
-            	
 
 	            /* Mettre à jour les capteurs */
             	for(int i=0;i<sensors.length;i++) {
                 	sensors[i].copyVisionImage(bufferedMatrices[i]);
-                	COULEURS.set(i, colorDetectedBySensor(i));                	
+                	COULEURS.set(i, utils.colorDetectedBySensor(i));                	
                 }
             	panel.repaint();
-            	/*******************************/
+            	/* ***************************** */
             	getCoords(position);
             	elapsed = getLifeTime();
-            }
-            
+            }            
             
             if (collisionDetected()){
             	setTranslationalVelocity(0);
             }
         }
-        
-        double POURCENTAGE_COULEUR[] = new double[2];
-
-        double lastError = 0;
-        double error = 0;
-    	double integral = 0;
-    	double derivative = 0;
-    	double big_angle = 0;
-    	double kp = 1, ki = 0.01, kd=10, kb=35*VMAX;
+    	
         public void suiviDeLigne() {
         	boolean[] T = COULEURS.get(1);
         	
-        	error = POURCENTAGE_COULEUR[0] - POURCENTAGE_COULEUR[1];
-        	integral = integral + error;
-        	derivative = error - lastError;
-        	lastError = error;
-        	
-        	if(Math.abs(hmin) < 60 && Math.abs(hmin) > 0) {
-        		big_angle = ((Math.PI/16)/100) * hmin;
-        	} else {
-        		big_angle = 0;
-        	}
-        	System.out.println(big_angle);
-        	
         	if(T[NOIR]) {
     			VITESSE = VMAX;
-    			ANGLE   = kp*error + ki*integral + kd*derivative + kb*big_angle;
+    			ANGLE   = utils.pid();
     			compteurblanc = 0;
     			coef = 4;
         	}
@@ -233,67 +185,8 @@ public class DemoTp4 extends Demo {
         	}
         	
         	compteurblanc += tic;
-
         }
         
-    	int hmin = -1;
-
-        public boolean[] colorDetectedBySensor(int i) {
-        	/* Renvoyer plutôt une liste de toute les couleurs présentes dans le capteur et utiliser contains après */
-        	BufferedImage sensor = bufferedMatrices[i];
-        	int w = sensor.getWidth();
-        	int h = sensor.getHeight();
-        	boolean[] couleurs = new boolean[4];
-        	
-        	
-        	if(i==1) {
-        		POURCENTAGE_COULEUR[0] = 0;
-        		POURCENTAGE_COULEUR[1] = 0;
-        		hmin = -1;
-        	}
-        	
-        	for(int y=0;y<h;y++){
-    			for(int x=0;x<w;x++){
-    				int color = sensor.getRGB(x, y);
-                    int red =   (color >> 16) & 0xFF;
-                    int green = (color >>  8) & 0xFF;
-                    int blue =  (color      ) & 0xFF;
-                    
-                    if(red > 230 && green > 230 && blue < 120){ //Jaune détecté
-                    	couleurs[JAUNE] = true;
-                    } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
-                    	couleurs[VERT] = true;
-                    } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
-                    	couleurs[NOIR] = true;
-                    	if(i == 1) {
-                    		if(x < (w/2)){
-                    			POURCENTAGE_COULEUR[0]++;
-                    		}else{
-                    			POURCENTAGE_COULEUR[1]++;
-                    		}
-                    		if(x==(w-1)) {
-                    			if(y > Math.abs(hmin)){
-                    				hmin=-y;
-                    			}
-                    		}
-                    		if(x==0) {
-                    			if(y > Math.abs(hmin)){
-                    				hmin=y;
-                    			}                    		
-                    		}
-                    	}
-                    } else if(red > 200 && green > 200 && blue > 200){ //BLANC détecté
-                    	couleurs[BLANC] = true;
-                    }
-        		}
-    		}
-        	if(i == 1) {
-    			POURCENTAGE_COULEUR[0] /= w*h;
-    			POURCENTAGE_COULEUR[1] /= w*h;
-        	}
-			return couleurs;
-        }        
-
         public void ramasser(Piece b){
         	Point3d p = new Point3d();
         	b.getCoords(p);
@@ -310,11 +203,11 @@ public class DemoTp4 extends Demo {
 			}
 		}
     
-		/*
-		 * 
-		 * MACHINE A ETAT
-		 * 
-		 */
+		/******************************************************************************************************************************
+		/******************************************************************************************************************************
+		/***************************************************** MACHINE A ETAT *********************************************************
+		/******************************************************************************************************************************
+		/******************************************************************************************************************************/
 		int etat,ramassePetitouGrand;
 		boolean resteGrand,restePetit,aRamasse,plein;
 		private final static int REPOSTOCHEMIN = 0;
@@ -339,9 +232,6 @@ public class DemoTp4 extends Demo {
 			}
 		}
 
-
-
-
 		private void depose() {
 			plein = false;
 			if(restePetit){
@@ -354,10 +244,7 @@ public class DemoTp4 extends Demo {
 			}
 			else
 				etat = FIN;
-			
 		}
-
-
 
 
 		private void cheminToRepos() {
