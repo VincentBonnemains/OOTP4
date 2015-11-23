@@ -37,6 +37,7 @@ public class Piece extends SimpleAgent{
 		int tab[]=new int[1];
 		tab[0]=length;
 		QuadArray quad=new QuadArray(length,QuadArray.COORDINATES|QuadArray.COLOR_3);
+		
 		Point3f infBasGauche = new Point3f(-(x/2),0,-(z/2));
 		Point3f infBasDroit = new Point3f(-(x/2),0,+(z/2));
 		Point3f infHautGauche = new Point3f(+(x/2),0,-(z/2));
@@ -47,16 +48,24 @@ public class Piece extends SimpleAgent{
 		Point3f supHautGauche = new Point3f(+(x/2),y,-(z/2));
 		Point3f supHautDroit = new Point3f(+(x/2),y,+(z/2));
 		
-		quad.setCoordinates(0, new Point3f[] {
-				/* face 1 */             infBasGauche, infBasDroit, infHautDroit, infHautGauche,
-				/* face 2 */             infBasGauche, supBasGauche, supHautGauche, infHautGauche,
-				/* face 3 */             infBasDroit, supBasDroit, supHautDroit, infHautDroit,
-				/* face 4 */             supBasGauche, supBasDroit, supHautDroit, supHautGauche,
-				/* face 5 */			 infBasGauche, infBasDroit, supBasDroit, supBasGauche,
-				/* face 6 */			 infHautGauche, infHautDroit, supHautDroit, supHautGauche,
-				});
+		/* face 1              infBasGauche, infBasDroit, infHautDroit, infHautGauche,
+		/* face 2              infBasGauche, supBasGauche, supHautGauche, infHautGauche,
+		/* face 3              infBasDroit, supBasDroit, supHautDroit, infHautDroit,
+		/* face 4              supBasGauche, supBasDroit, supHautDroit, supHautGauche,
+		/* face 5 			 infBasGauche, infBasDroit, supBasDroit, supBasGauche,
+		/* face 6 			 infHautGauche, infHautDroit, supHautDroit, supHautGauche,
+		});*/
 		
-		for(int i=1;i<24;i++) quad.setColor(i,c);
+		quad.setCoordinates(0, new Point3f[] {
+				/* face 1*/              infBasGauche, infBasDroit, infHautDroit, infHautGauche,
+				/* face 2*/            infBasGauche, supBasGauche, supHautGauche, infHautGauche,
+				/* face 3*/              infBasDroit, supBasDroit, supHautDroit, infHautDroit,
+				/* face 4*/              supBasGauche, supBasDroit, supHautDroit, supHautGauche,
+				/* face 5*/ 			 infBasGauche, infBasDroit, supBasDroit, supBasGauche,
+				/* face 6*/ 			 infHautGauche, infHautDroit, supHautDroit, supHautGauche,
+				});
+
+		for(int i=1;i<24;i++){ quad.setColor(i,c);}
 		
 
 		Appearance app=new Appearance();
@@ -67,7 +76,6 @@ public class Piece extends SimpleAgent{
 	   
 		
 	 	body = new Shape3D(quad,app);
-
 		//  define the boundsfFor collision  detection
 		    BoundingBox bounds = new BoundingBox();
 		    bounds.setUpper(x/2,y/2,z/2);

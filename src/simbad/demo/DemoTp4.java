@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Random;
 
 import javax.swing.JInternalFrame;
 import javax.swing.JPanel;
@@ -43,7 +44,6 @@ import javax.vecmath.Vector3f;
 import simbad.sim.Agent;
 import simbad.sim.Box;
 import simbad.sim.CameraSensor;
-
 import simbad.sim.PastilleAgent;
 import simbad.sim.Piece;
 import simbad.sim.RangeSensorBelt;
@@ -57,9 +57,10 @@ import utils.RobotUtils;
  * The Base class for all demos.
  */
 public class DemoTp4 extends Demo {
-	Piece[] petites_pieces = new Piece[3];
-	Piece[] grandes_pieces = new Piece[3];
+
 	
+	ArrayList<Piece> petites_pieces = new ArrayList<>();
+	ArrayList<Piece> grandes_pieces = new ArrayList<>();
 	public class Robot extends Agent {
 		/*******************************************************
 		 * ATTRIBUTES ******************************************
@@ -72,6 +73,7 @@ public class DemoTp4 extends Demo {
 		Point3d position,current_position;
 		ArrayList<Piece> sac = new ArrayList<>();
         double tic = 0.02,tac=0;
+		
 
 		double ANGLE = 0;
 		double nbPiecesPortees = 0;
@@ -83,8 +85,10 @@ public class DemoTp4 extends Demo {
     	int sens = 1;
     	public int nbColors = 5;
     	int nbCameraSensors = 3;
-		ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		boolean frontColors[] = new boolean[nbColors];
+		int ramassage = 0;
+		ArrayList<Piece> enRamassage = new ArrayList<>();
+    	ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		public boolean retrouverChemin = false;
 		
 		CameraSensor[] sensors = new CameraSensor[nbCameraSensors];
@@ -147,17 +151,18 @@ public class DemoTp4 extends Demo {
 	            getCoords(current_position);
             	setTranslationalVelocity(VITESSE*(1-nbPiecesPortees*0.05));
 	            setRotationalVelocity(ANGLE);
-	            machineAEtat();      
 
+	            machineAEtat();
+            	
 	            /* Mettre à jour les capteurs */
             	frontSensor.copyVisionImage(frontMatrix);
             	frontColors = utils.colorsDetected(frontMatrix);
             	panel.repaint();
             	/* ***************************** */
+            	deplacerObjets();
             	getCoords(position);
             	elapsed = getLifeTime();
             }            
-            
             if (collisionDetected()){
             	setTranslationalVelocity(0);
             }
@@ -189,15 +194,16 @@ public class DemoTp4 extends Demo {
         public void ramasser(Piece b){
         	Point3d p = new Point3d();
         	b.getCoords(p);
-        	b.moveToPosition(new Vector3d(p.x,p.y+1,p.z));
-			sac.add(b);
+        	b.moveToPosition(new Vector3d(p.x,p.y+0.1,p.z));
         }
 	
 		public void deplacerObjets(){
 			Piece b;
 			Point3d p = new Point3d();
+			double x,y;
 			for(int i = 0;i < sac.size();++i){
 				b = sac.get(i);
+				b.getCoords(p);
 				b.translateTo(new Vector3d(current_position.x-position.x,0,current_position.z-position.z));
 			}
 		}
@@ -294,10 +300,12 @@ public class DemoTp4 extends Demo {
 					
 						if(pivoter(Math.PI/2)) {
 							internalState = 0;							
+						}
+					} else if(resteGrand) {
 							aRamasse = false;
 							ramassePetitouGrand = 1;
 							etat = RECHERCHEPASTILLEJAUNE;
-						}
+						
 					}
 				break;
 			}	
@@ -312,21 +320,53 @@ public class DemoTp4 extends Demo {
 				plein = true;
 			}
 			//nbPiecesPortees = 3;
-			
-			
+
+			int i,j;
+			VITESSE = 0;
+			Random rand = new Random();
+			if(ramassage == 0){
+				switch(ramassePetitouGrand){
+					case 0:
+						for(i = 0;i < 3;++i){
+							enRamassage.add(petites_pieces.get(0));
+							petites_pieces.remove(0);
+						}
+					break;
+					default:
+						j = (rand.nextInt(3))+1;
+						if(j > grandes_pieces.size())
+							j = grandes_pieces.size();
+						for(i = 0;i < j;++i){
+							enRamassage.add(grandes_pieces.get(0));
+							grandes_pieces.remove(0);
+						}	
+				}
+			}
+			if(++ramassage < 7){
+				for(i = 0;i < enRamassage.size();++i)
+					ramasser(enRamassage.get(i));
+				return;
+			}
 			switch(internalState){
 				case 0:
 					if(pivoter(Math.PI)) {
+						int k = enRamassage.size();
+						for(i = 0;i <k ;++i){
+							sac.add(enRamassage.get(0));
+							enRamassage.remove(0);
+							//VITESSE -= 0.166;
+						}
 						internalState++;
 					}
 				break;
 				case 1:
+					ramassage = 0;
+					aRamasse = true;
 					internalState = 0;
 					etat = RECHERCHEPASTILLEJAUNE;
 				break;
 						
 				default:
-				break;
 			}
 			
 			
@@ -358,7 +398,7 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 1:		
-					if(roulerPendantDistance(0.3)) {
+					if(roulerPendantDistance(0.2)) {
 						internalState++;
 					}
 				break;
@@ -553,29 +593,26 @@ public class DemoTp4 extends Demo {
         
         Piece pp1 = new Piece(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp1);
-        petites_pieces[0] = pp1;
+        petites_pieces.add(pp1);
         Piece pp2 = new Piece(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp2);
-        petites_pieces[1] = pp2;
+        petites_pieces.add(pp2);
         Piece pp3 = new Piece(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp3);
-        petites_pieces[2] = pp3;
+        petites_pieces.add(pp3);
         
         
       //grandes
         Piece gp1 = new Piece(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp1);
-        grandes_pieces[0] = gp1;
+        grandes_pieces.add(gp1);
         Piece gp2 = new Piece(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp2);
-        grandes_pieces[1] = gp2;
+        grandes_pieces.add(gp2);
         Piece gp3 = new Piece(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp3);
-        grandes_pieces[2] = gp3;
+        grandes_pieces.add(gp3);
         
-        //Robot r2d2 = new Robot(new Vector3d(0,0.1,-11), "robot 1");
-      //  add(r2d2);
-        //r2d2.ramasser(petites_pieces[0]);
         genererCoins();
     }
     
