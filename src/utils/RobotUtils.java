@@ -10,7 +10,7 @@ public class RobotUtils {
 	double lastError,error,integral,derivative,big_angle,kp, ki, kd, kb, hmin;
 	Agent robot;
 	double[] POURCENTAGE_COULEUR;
-	public static int NOIR=0,VERT=1,BLANC=2,JAUNE=3;
+	public static int NOIR=0,VERT=1,BLANC=2,JAUNE=3,ROUGE = 4, BLEU = 5;
 	
 	public RobotUtils(Agent robot){
 		lastError = 0;
@@ -61,11 +61,15 @@ public class RobotUtils {
                 int red =   (color >> 16) & 0xFF;
                 int green = (color >>  8) & 0xFF;
                 int blue =  (color      ) & 0xFF;
-                
+                System.out.println("couleur "+red+" "+green+" "+blue);
                 if(red > 230 && green > 230 && blue < 120){ //Jaune détecté
                 	couleurs[JAUNE] = true;
                 } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
                 	couleurs[VERT] = true;
+                } else if(red > 100 && green <100 && blue < 100){ //Rouge détecté
+                	couleurs[ROUGE] = true;
+                } else if(red < 100 && green < 100 && blue > 100){ //Bleu détecté
+                	couleurs[BLEU] = true;
                 } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
                 	couleurs[NOIR] = true;
                 	if(i == 1) {
@@ -112,11 +116,14 @@ public class RobotUtils {
                 int red =   (color >> 16) & 0xFF;
                 int green = (color >>  8) & 0xFF;
                 int blue =  (color      ) & 0xFF;
-                
                 if(red > 230 && green > 230 && blue < 120){ //Jaune détecté
                 	couleurs[JAUNE] = true;
                 } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
                 	couleurs[VERT] = true;
+                } else if(red > 100 && green <100 && blue < 100){ //Rouge détecté
+                	couleurs[ROUGE] = true;
+                } else if(red < 100 && green < 100 && blue > 100){ //Bleu détecté
+                	couleurs[BLEU] = true;
                 } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
                 	couleurs[NOIR] = true;
             		if(x < (w/2)){

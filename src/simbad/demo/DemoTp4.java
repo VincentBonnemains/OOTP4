@@ -46,6 +46,7 @@ import simbad.sim.Box;
 import simbad.sim.CameraSensor;
 import simbad.sim.PastilleAgent;
 import simbad.sim.Piece;
+import simbad.sim.Piece2;
 import simbad.sim.RangeSensorBelt;
 import simbad.sim.RobotFactory;
 import simbad.sim.Wall;
@@ -59,20 +60,20 @@ import utils.RobotUtils;
 public class DemoTp4 extends Demo {
 
 	
-	ArrayList<Piece> petites_pieces = new ArrayList<>();
-	ArrayList<Piece> grandes_pieces = new ArrayList<>();
+	ArrayList petites_pieces = new ArrayList<>();
+	ArrayList grandes_pieces = new ArrayList<>();
 	public class Robot extends Agent {
 		/*******************************************************
 		 * ATTRIBUTES ******************************************
 		 *******************************************************/
 		private RobotUtils utils;
-		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3;
+		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3,ROUGE = 4,BLEU = 5;
 		int compteurPivotGauche=0,compteurPivotDroit=0;
 		double elapsed;
 
 		Point3d position,current_position;
-		ArrayList<Piece> sac = new ArrayList<>();
-        double tic = 0.02,tac=0;
+		ArrayList sac = new ArrayList<>();
+        double tic = 0.01,tac=0;
 		
 
 		double ANGLE = 0;
@@ -83,11 +84,11 @@ public class DemoTp4 extends Demo {
 		double compteurblanc = 0.0;
     	double coef = 8;
     	int sens = 1;
-    	public int nbColors = 5;
+    	public int nbColors = 6;
     	int nbCameraSensors = 3;
 		boolean frontColors[] = new boolean[nbColors];
-		int ramassage = 0;
-		ArrayList<Piece> enRamassage = new ArrayList<>();
+		int ramassage = 0,depot = 0;
+		ArrayList enRamassage = new ArrayList<>();
     	ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		public boolean retrouverChemin = false;
 		
@@ -149,11 +150,10 @@ public class DemoTp4 extends Demo {
         	tac = getLifeTime() - elapsed;
             if (tac >= tic) {
 	            getCoords(current_position);
+	            System.out.println(plein+" "+aRamasse+" "+ramassePetitouGrand+" "+getState()+" "+resteGrand);
+				machineAEtat();
             	setTranslationalVelocity(VITESSE*(1-nbPiecesPortees*0.05));
 	            setRotationalVelocity(ANGLE);
-
-	            machineAEtat();
-            	
 	            /* Mettre à jour les capteurs */
             	frontSensor.copyVisionImage(frontMatrix);
             	frontColors = utils.colorsDetected(frontMatrix);
@@ -191,18 +191,24 @@ public class DemoTp4 extends Demo {
         	compteurblanc += tic;
         }
         
-        public void ramasser(Piece b){
+        public void ramasser(Piece2 b){
         	Point3d p = new Point3d();
         	b.getCoords(p);
         	b.moveToPosition(new Vector3d(p.x,p.y+0.1,p.z));
         }
+        
+        public void deposer(Piece2 b){
+        	Point3d p = new Point3d();
+        	b.getCoords(p);
+        	b.moveToPosition(new Vector3d(p.x,p.y-0.1,p.z));
+        }
 	
 		public void deplacerObjets(){
-			Piece b;
+			Piece2 b;
 			Point3d p = new Point3d();
 			double x,y;
 			for(int i = 0;i < sac.size();++i){
-				b = sac.get(i);
+				b = (Piece2)sac.get(i);
 				b.getCoords(p);
 				b.translateTo(new Vector3d(current_position.x-position.x,0,current_position.z-position.z));
 			}
@@ -220,7 +226,9 @@ public class DemoTp4 extends Demo {
 		private final static int RECHERCHEPIECE = 2;
 		private final static int RAMASSE = 3;
 		private final static int RECHERCHEPASTILLEVERTE = 4;
-		private final static int CHEMINTOREPOS = 5;
+		private final static int RECHERCHEREPOS = 5;
+		private final static int REPOSTOZONEPP = 8;
+		private final static int REPOSTOZONEGP = 9;
 		private final static int DEPOSE = 6;
 		private final static int FIN = 7;
 		
@@ -231,40 +239,177 @@ public class DemoTp4 extends Demo {
 				case RECHERCHEPIECE:			rechercherPiece();			break;
 				case RAMASSE:					ramasse();					break;
 				case RECHERCHEPASTILLEVERTE:	recherchePastilleVerte();	break;
-				case CHEMINTOREPOS:				cheminToRepos();			break;
+				case RECHERCHEREPOS:			rechercheRepos();			break;
+				case REPOSTOZONEPP:				reposToZonePP();			break;
+				case REPOSTOZONEGP:				reposToZoneGP();			break;
 				case DEPOSE:					depose();					break;
+				case FIN:						fin();						break;
 				default:break;
 			}
+		}
+		
+		public String getState(){
+			switch(etat){
+			case REPOSTOCHEMIN:				return("reposToChemin");
+			case RECHERCHEPASTILLEJAUNE:	return("recherchePastilleJaune");
+			case RECHERCHEPIECE:			return("recherchePiece");
+			case RAMASSE:					return("ramasse");
+			case RECHERCHEPASTILLEVERTE:	return("recherchePastilleVerte");
+			case RECHERCHEREPOS:			return("rechercheRepos");
+			case REPOSTOZONEPP:				return("reposToZonePP");
+			case REPOSTOZONEGP:				return("reposToZoneGP");
+			case DEPOSE:					return("depose");
+			case FIN:						return("fin");
+			default: return("don't know");
+		}
+		}
+		
+		private void fin(){
+			VITESSE = 0;
+			ANGLE = 0;
 		}
 
 		private void depose() {
 			plein = false;
-			if(restePetit){
-				ramassePetitouGrand = 0;
-				internalState = 0;
-				etat = REPOSTOCHEMIN;
+			VITESSE = 0;
+			//Si depot petites pieces
+			if(++depot < 7){
+				if(sac.size()>3){
+					for(int i = 0;i < 3;++i)
+						deposer((Piece2)sac.get(i));
+				}
+				else{
+					for(int i = 0;i < sac.size();++i)
+						deposer((Piece2)sac.get(i));
+				}
+				return;
 			}
-			else if(resteGrand){
-				ramassePetitouGrand =1;
-				internalState = 0;
-				etat = REPOSTOCHEMIN;
+			else if(++depot < 9){
+				if(sac.size()>3){
+					for(int i = 0;i < 3;++i)
+						sac.remove(0);
+				}
+				else{
+					int j = sac.size();
+					for(int i = 0;i < j;++i)
+						sac.remove(0);
+				}
 			}
-			else {
+			switch(internalState){
+			case 0:
+				if(pivoter(Math.PI))
+					internalState++;
+				break;
+			case 1:
+				depot = 0;
+				plein = false;
 				internalState = 0;
-				etat = FIN;
+				etat = RECHERCHEREPOS;
+				break;
 			}
 		}
 
 
-		private void cheminToRepos() {
+		private void rechercheRepos() {
 			VITESSE = VMAX;
 			ANGLE   = 0;
-			
-			//etat = DEPOSE;
+			boolean[] T = frontColors;
+			switch(internalState){
+				case 0:
+					if(T[NOIR]) {
+						internalState++;
+					}
+				break;
+				case 1:
+					System.out.println("detecté");
+					if(roulerPendantDistance(1.5)) {
+						internalState++;
+					}
+				break;
+				case 2:
+					System.out.println("ok");
+					if(sac.size() > 3) {
+						if(pivoter(-Math.PI/2)) {
+							internalState = 0;
+							etat = REPOSTOZONEPP;
+						}
+					}
+					else{
+						if(restePetit){
+							restePetit = false;
+							internalState = 0;
+							etat = REPOSTOZONEGP;
+						}
+						else if(sac.size() == 0){
+							if(resteGrand){
+								if(pivoter(-Math.PI/2)){
+									internalState = 0;
+									etat = REPOSTOCHEMIN;
+								}
+							}
+							else{
+								internalState = 0;
+								etat =FIN;
+							}
+						}
+						else{
+							if(pivoter(Math.PI/2)) {
+								internalState = 0;
+								etat = REPOSTOZONEGP;
+							}
+						}	
+					}
+				break;
+			}
 			
 		}
 
-
+		private void reposToZonePP() {
+			/*VITESSE = VMAX;
+			ANGLE   = 0;*/
+			boolean[] T = frontColors;
+			switch(internalState){
+				case 0:
+					if(T[ROUGE]) {
+						internalState++;
+					}
+				break;
+				case 1:
+					System.out.println("detecté");
+					if(roulerPendantDistance(1.5)) {
+						internalState++;
+					}
+				break;
+				case 2:
+					internalState = 0;
+					etat = DEPOSE;
+				break;
+			}
+			
+		}
+		
+		private void reposToZoneGP() {
+			/*VITESSE = VMAX;
+			ANGLE   = 0;*/
+			boolean[] T = frontColors;
+			switch(internalState){
+				case 0:
+					if(T[BLEU]) {
+						internalState++;
+					}
+				break;
+				case 1:
+					if(roulerPendantDistance(1.5)) {
+						internalState++;
+					}
+				break;
+				case 2:
+					internalState = 0;
+					etat = DEPOSE;
+				break;
+			}
+			
+		}
 
 
 		private void recherchePastilleVerte() {
@@ -288,26 +433,16 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 2:
-					if(plein) {
-						if(pivoter(-Math.PI/2)) {
-							internalState = 0;
-							etat = CHEMINTOREPOS;
-						}						
-					} else if(aRamasse && resteGrand){
-						
-					}
-					else if(resteGrand) {
-					
-						if(pivoter(Math.PI/2)) {
-							internalState = 0;							
-						}
-					} else if(resteGrand) {
-							aRamasse = false;
-							ramassePetitouGrand = 1;
-							etat = RECHERCHEPASTILLEJAUNE;
-						
-					}
+					if(pivoter(Math.PI/2)) {
+						internalState++;
+					}						
 				break;
+				case 3:
+					if(roulerPendantDistance(0.5)){
+						internalState = 0;
+						etat = RECHERCHEREPOS;
+					}
+					break;
 			}	
 		}
 
@@ -344,7 +479,7 @@ public class DemoTp4 extends Demo {
 			}
 			if(++ramassage < 7){
 				for(i = 0;i < enRamassage.size();++i)
-					ramasser(enRamassage.get(i));
+					ramasser((Piece2)enRamassage.get(i));
 				return;
 			}
 			switch(internalState){
@@ -356,6 +491,13 @@ public class DemoTp4 extends Demo {
 							enRamassage.remove(0);
 							//VITESSE -= 0.166;
 						}
+						if(ramassePetitouGrand == 1){
+							if(rangeSensor.getBackQuadrantMeasurement() <= (1+(grandes_pieces.size())*0.15))
+								resteGrand = true;
+							else
+								resteGrand = false;
+						}
+							
 						internalState++;
 					}
 				break;
@@ -363,6 +505,8 @@ public class DemoTp4 extends Demo {
 					ramassage = 0;
 					aRamasse = true;
 					internalState = 0;
+					if(ramassePetitouGrand == 1)
+						plein = true;
 					etat = RECHERCHEPASTILLEJAUNE;
 				break;
 						
@@ -397,25 +541,47 @@ public class DemoTp4 extends Demo {
 						internalState++;
 					}
 				break;
-				case 1:		
-					if(roulerPendantDistance(0.2)) {
+				case 1:
+					System.out.println("dac");
+					if(roulerPendantDistance(0.25)) {
 						internalState++;
 					}
+					System.out.println("aie");
 				break;
 				case 2:
+					System.out.println("cool");
 					if(aRamasse) {
-						if(pivoter(Math.PI/2)) {
-							internalState++;							
-						}						
+						if(ramassePetitouGrand == 0){
+							if(pivoter(Math.PI/2)) {
+								internalState++;							
+							}
+						}
+						else{
+							if(pivoter(-Math.PI/2)) {
+								internalState++;							
+							}
+						}
 					} else {
-						if(pivoter(-Math.PI/2)) {
-							internalState++;							
+						if(ramassePetitouGrand == 0){
+							if(pivoter(-Math.PI/2)) {
+								internalState++;							
+							}
+						}
+						else{
+							System.out.println("ok");
+							if(pivoter(Math.PI/2)) {
+								internalState++;							
+							}
+							System.out.println("ik");
 						}
 					}
 				break;
 				case 3:
-					if(aRamasse || plein) {
+					if(aRamasse) {
 						internalState = 0;
+						aRamasse = false;
+						if(ramassePetitouGrand == 0)
+							ramassePetitouGrand = 1;
 						etat = RECHERCHEPASTILLEVERTE;
 					} else {
 						internalState = 0;
@@ -446,9 +612,17 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 2:
-					if(pivoter(Math.PI/2)) {
-						internalState = 0;
-						etat = RECHERCHEPASTILLEJAUNE;
+					if(ramassePetitouGrand == 0){
+						if(pivoter(Math.PI/2)) {
+							internalState = 0;
+							etat = RECHERCHEPASTILLEJAUNE;
+						}
+					}
+					else{
+						if(pivoter(-Math.PI/2)) {
+							internalState = 0;
+							etat = RECHERCHEPASTILLEJAUNE;
+						}
 					}
 				break;
 			}
@@ -458,9 +632,12 @@ public class DemoTp4 extends Demo {
 		Point3d position_save;
 		private boolean roulerPendantDistance(double distance){
 			if(!roulerPendantDistanceActivated){
+				ANGLE = 0;
+				VITESSE = VMAX;
 				roulerPendantDistanceActivated = true;
 				position_save = new Point3d(current_position);
 			} else {
+				this.getCoords(current_position);
 	            double d = Math.sqrt(Math.pow((current_position.x - position_save.x), 2) + Math.pow((current_position.z - position_save.z), 2));
 	            if(d >= distance){
 	            	roulerPendantDistanceActivated = false;
@@ -475,8 +652,8 @@ public class DemoTp4 extends Demo {
 			ANGLE = angle;
 			VITESSE = 0;
 			compteur += tac;
-			
-			if(compteur >= angle/getRotationalVelocity()) {
+			System.out.println("pivot "+(compteur >= Math.abs(angle/getRotationalVelocity()))+" "+compteur+" "+Math.abs(angle/getRotationalVelocity()));
+			if(compteur >= Math.abs(angle/getRotationalVelocity())) {
 				ANGLE = 0;
 				VITESSE = VMAX;
 				compteur = 0;
@@ -591,28 +768,27 @@ public class DemoTp4 extends Demo {
         //Creations pièces
         //petites
         
-        Piece pp1 = new Piece(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
+        Piece2 pp1 = new Piece2(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp1);
         petites_pieces.add(pp1);
-        Piece pp2 = new Piece(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
+        Piece2 pp2 = new Piece2(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp2);
         petites_pieces.add(pp2);
-        Piece pp3 = new Piece(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
+        Piece2 pp3 = new Piece2(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
         add(pp3);
         petites_pieces.add(pp3);
         
         
       //grandes
-        Piece gp1 = new Piece(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
+        Piece2 gp1 = new Piece2(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp1);
-        grandes_pieces.add(gp1);
-        Piece gp2 = new Piece(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
+        Piece2 gp2 = new Piece2(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp2);
-        grandes_pieces.add(gp2);
-        Piece gp3 = new Piece(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
+        Piece2 gp3 = new Piece2(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
         add(gp3);
         grandes_pieces.add(gp3);
-        
+        grandes_pieces.add(gp2);
+        grandes_pieces.add(gp1);
         genererCoins();
     }
     
