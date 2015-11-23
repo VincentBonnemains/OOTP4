@@ -43,7 +43,7 @@ public class RobotFactory extends Factory {
      * @param agent
      * @return the sensor object
      */
-    static public CameraSensor addCameraSensor(Agent agent) {
+    /*static public CameraSensor addCameraSensor(Agent agent) {
         double agentHeight = agent.getHeight();
         float cameraBodyRadius = 0.1f;
         CameraSensor camera = new CameraSensor(cameraBodyRadius, 100, 100);
@@ -51,6 +51,17 @@ public class RobotFactory extends Factory {
         camera.setName("Camera");
         Vector3d pos = new Vector3d(0.0, (agentHeight / 2)
                 + (cameraBodyRadius * 3) / 4, 0);
+        agent.addSensorDevice(camera, pos, 0);
+        return camera;
+    }*/
+	static public CameraSensor addCameraSensor(Agent agent) {
+        double agentHeight = agent.getHeight();
+        float cameraBodyRadius = 0.06f;
+        CameraSensor camera = new CameraSensor(cameraBodyRadius, 100, 100);
+        camera.setUpdatePerSecond(100);
+        camera.setName("Camera");
+        camera.rotateX(3*Math.PI/2);
+        Vector3d pos = new Vector3d(0.3, (agentHeight / 4), 0);
         agent.addSensorDevice(camera, pos, 0);
         return camera;
     }
@@ -65,7 +76,7 @@ public class RobotFactory extends Factory {
         double agentHeight = agent.getHeight();
         float cameraBodyRadius = 0.06f;
         
-        int nbSensors = 3;
+        int nbSensors = 1;
         
         for(int i=0;i<nbSensors;i++) {
         	cameras[i] = new CameraSensor(cameraBodyRadius, 100, 100);
@@ -83,8 +94,7 @@ public class RobotFactory extends Factory {
     	agent.addSensorDevice(cameras[0], gauche, 0);
     	agent.addSensorDevice(cameras[1], devant, 0);
     	agent.addSensorDevice(cameras[2], droite, 0);
-        for(int i=0;i<nbSensors;i++) {
-        }
+
         return cameras;
     }
 
@@ -100,7 +110,7 @@ public class RobotFactory extends Factory {
         double agentRadius = agent.getRadius();
         RangeSensorBelt sonarBelt = new RangeSensorBelt((float) agentRadius,
                 0f, 1.5f, 9, RangeSensorBelt.TYPE_SONAR,0);
-        sonarBelt.setUpdatePerSecond(3);
+        sonarBelt.setUpdatePerSecond(100);
         sonarBelt.setName("sonars");
         Vector3d pos = new Vector3d(0, agentHeight / 2, 0.0);
         agent.addSensorDevice(sonarBelt, pos, 0);

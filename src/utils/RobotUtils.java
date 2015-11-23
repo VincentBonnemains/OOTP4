@@ -95,5 +95,48 @@ public class RobotUtils {
 			POURCENTAGE_COULEUR[1] /= w*h;
     	}
 		return couleurs;
-    }   
+    }
+	
+	public boolean[] colorsDetected(BufferedImage matrix) {
+    	int w = matrix.getWidth();
+    	int h = matrix.getHeight();
+    	boolean[] couleurs = new boolean[((DemoTp4.Robot)robot).nbColors];
+    	
+		POURCENTAGE_COULEUR[0] = 0;
+		POURCENTAGE_COULEUR[1] = 0;
+		hmin = -1;    	
+    	
+    	for(int y=0;y<h;y++){
+			for(int x=0;x<w;x++){
+				int color = matrix.getRGB(x, y);
+                int red =   (color >> 16) & 0xFF;
+                int green = (color >>  8) & 0xFF;
+                int blue =  (color      ) & 0xFF;
+                
+                if(red > 230 && green > 230 && blue < 120){ //Jaune détecté
+                	couleurs[JAUNE] = true;
+                } else if(red < 100 && green > 200 && blue < 200){ //Vert détecté
+                	couleurs[VERT] = true;
+                } else if(red < 50 && green < 50 && blue < 50){ //Noir détecté
+                	couleurs[NOIR] = true;
+            		if(x < (w/2)){
+            			POURCENTAGE_COULEUR[0]++;
+            		}else{
+            			POURCENTAGE_COULEUR[1]++;
+            		}
+            		if(x==(w-1) && y > Math.abs(hmin)) {
+            			hmin = -y;
+            		}
+            		else if(x==0 && y > Math.abs(hmin)){
+            			hmin = y;          		
+            		}                	
+                } else if(red > 200 && green > 200 && blue > 200){ //BLANC détecté
+                	couleurs[BLANC] = true;
+                }
+    		}
+		}
+		POURCENTAGE_COULEUR[0] /= w*h;
+		POURCENTAGE_COULEUR[1] /= w*h;
+		return couleurs;
+    }  
 }

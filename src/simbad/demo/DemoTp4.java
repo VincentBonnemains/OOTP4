@@ -59,6 +59,7 @@ import utils.RobotUtils;
 public class DemoTp4 extends Demo {
 	Piece[] petites_pieces = new Piece[3];
 	Piece[] grandes_pieces = new Piece[3];
+	
 	public class Robot extends Agent {
 		/*******************************************************
 		 * ATTRIBUTES ******************************************
@@ -70,23 +71,27 @@ public class DemoTp4 extends Demo {
 
 		Point3d position,current_position;
 		ArrayList<Piece> sac = new ArrayList<>();
-        double tic = 0.02;
+        double tic = 0.02,tac=0;
 
 		double ANGLE = 0;
-		
+		double nbPiecesPortees = 0;
 		public double VMAX = 1;
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
 		double compteurblanc = 0.0;
     	double coef = 8;
     	int sens = 1;
-    	int nbColors = 5;
+    	public int nbColors = 5;
     	int nbCameraSensors = 3;
 		ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
+		boolean frontColors[] = new boolean[nbColors];
 		public boolean retrouverChemin = false;
 		
 		CameraSensor[] sensors = new CameraSensor[nbCameraSensors];
+		public CameraSensor frontSensor;
+		
 		public BufferedImage[] bufferedMatrices = new BufferedImage[nbCameraSensors];
+		public BufferedImage frontMatrix;
 		RangeSensorBelt rangeSensor;
 				
 		JPanel panel;
@@ -100,17 +105,16 @@ public class DemoTp4 extends Demo {
         public Robot(Vector3d position, String name) {
             super(position, name);
             utils = new RobotUtils(this);
-            sensors = RobotFactory.addCameraBeltSensor(this,sensors);
+            //sensors = RobotFactory.addCameraBeltSensor(this,sensors);
+            frontSensor = RobotFactory.addCameraSensor(this);
             rangeSensor = RobotFactory.addSonarBeltSensor(this);
             this.position = new Point3d();
             this.current_position = new Point3d();
             // prepare a buffer for storing image
-            for(int i=0;i<bufferedMatrices.length;i++){
-            	bufferedMatrices[i] = sensors[i].createCompatibleImage();
-            }
+            frontMatrix = frontSensor.createCompatibleImage();
             // Prepare UI panel for image display
             panel = new ImagerPanel(this);
-            Dimension dim = new Dimension(bufferedMatrices[0].getWidth()*bufferedMatrices.length, bufferedMatrices[0].getHeight());
+            Dimension dim = new Dimension(frontMatrix.getWidth(),frontMatrix.getHeight());
             panel.setPreferredSize(dim);
             panel.setMinimumSize(dim);
             setUIPanel(panel);
@@ -138,22 +142,16 @@ public class DemoTp4 extends Demo {
 
         /** Perform one step of Agent's Behavior */
         public void performBehavior() {
-        	
-            if ((getLifeTime() - elapsed) > tic) {
+        	tac = getLifeTime() - elapsed;
+            if (tac >= tic) {
 	            getCoords(current_position);
-            	setTranslationalVelocity(VITESSE);
+            	setTranslationalVelocity(VITESSE*(1-nbPiecesPortees*0.05));
 	            setRotationalVelocity(ANGLE);
-	            machineAEtat();
-            	
-	            /*getCoords(current_position);
-	            deplacerObjets();
-	            getCoords(position); */           
+	            machineAEtat();      
 
 	            /* Mettre à jour les capteurs */
-            	for(int i=0;i<sensors.length;i++) {
-                	sensors[i].copyVisionImage(bufferedMatrices[i]);
-                	COULEURS.set(i, utils.colorDetectedBySensor(i));                	
-                }
+            	frontSensor.copyVisionImage(frontMatrix);
+            	frontColors = utils.colorsDetected(frontMatrix);
             	panel.repaint();
             	/* ***************************** */
             	getCoords(position);
@@ -166,7 +164,8 @@ public class DemoTp4 extends Demo {
         }
     	
         public void suiviDeLigne() {
-        	boolean[] T = COULEURS.get(1);
+//        	boolean[] T = COULEURS.get(1);
+        	boolean[] T = frontColors;
         	
         	if(T[NOIR]) {
     			VITESSE = VMAX;
@@ -236,14 +235,18 @@ public class DemoTp4 extends Demo {
 			plein = false;
 			if(restePetit){
 				ramassePetitouGrand = 0;
+				internalState = 0;
 				etat = REPOSTOCHEMIN;
 			}
 			else if(resteGrand){
 				ramassePetitouGrand =1;
+				internalState = 0;
 				etat = REPOSTOCHEMIN;
 			}
-			else
+			else {
+				internalState = 0;
 				etat = FIN;
+			}
 		}
 
 
@@ -259,7 +262,8 @@ public class DemoTp4 extends Demo {
 
 
 		private void recherchePastilleVerte() {
-			boolean T[] = COULEURS.get(1);
+			boolean[] T = frontColors;
+			
 			switch(internalState){
 				case 0:
 					suiviDeLigne();
@@ -267,19 +271,28 @@ public class DemoTp4 extends Demo {
 						internalState++;
 					}
 				break;
-				case 1:		
-					if(roulerPendantDistance(0.3)) {
-						internalState++;
+				case 1:
+					if(plein){
+						if(roulerPendantDistance(0.3)) {
+							internalState++;
+						}
+					} else {
+						internalState = 0;
+						etat = RECHERCHEPASTILLEJAUNE;
 					}
 				break;
 				case 2:
-					if(aRamasse || plein) {
-						if(pivoter(-Math.PI/4)) {
+					if(plein) {
+						if(pivoter(-Math.PI/2)) {
 							internalState = 0;
 							etat = CHEMINTOREPOS;
-						}
-					} else if(resteGrand) {
-						if(pivoter(Math.PI/4)) {
+						}						
+					} else if(aRamasse && resteGrand){
+						
+					}
+					else if(resteGrand) {
+					
+						if(pivoter(Math.PI/2)) {
 							internalState = 0;							
 							aRamasse = false;
 							ramassePetitouGrand = 1;
@@ -294,15 +307,16 @@ public class DemoTp4 extends Demo {
 
 
 		private void ramasse() {
-			/*aRamasse = true;
+			aRamasse = true;
 			if(ramassePetitouGrand == 1) {
 				plein = true;
 			}
-			*/
-			aRamasse = true;
+			//nbPiecesPortees = 3;
+			
+			
 			switch(internalState){
 				case 0:
-					if(pivoter(Math.PI/2)) {
+					if(pivoter(Math.PI)) {
 						internalState++;
 					}
 				break;
@@ -323,7 +337,9 @@ public class DemoTp4 extends Demo {
 
 		private void rechercherPiece() {
 			suiviDeLigne();
-			if(rangeSensor.getFrontQuadrantMeasurement() < 1) {
+			double d = rangeSensor.getFrontQuadrantMeasurement();
+			if(d < 2) {
+				internalState = 0;
 				etat = RAMASSE;
 			}
 		}
@@ -332,7 +348,8 @@ public class DemoTp4 extends Demo {
 
 
 		private void recherchePastilleJaune() {
-			boolean T[] = COULEURS.get(1);
+			boolean[] T = frontColors;
+
 			switch(internalState){
 				case 0:
 					suiviDeLigne();
@@ -347,24 +364,24 @@ public class DemoTp4 extends Demo {
 				break;
 				case 2:
 					if(aRamasse) {
-						if(pivoter(Math.PI/4)) {
+						if(pivoter(Math.PI/2)) {
 							internalState++;							
 						}						
 					} else {
-						if(pivoter(-Math.PI/4)) {
+						if(pivoter(-Math.PI/2)) {
 							internalState++;							
 						}
 					}
 				break;
 				case 3:
-					if(roulerPendantDistance(0.2)) {
+					if(aRamasse || plein) {
 						internalState = 0;
-						if(aRamasse) {
-							etat = RECHERCHEPASTILLEVERTE;
-						} else {
-							etat = RECHERCHEPIECE;
-						}
-					}					
+						etat = RECHERCHEPASTILLEVERTE;
+					} else {
+						internalState = 0;
+						etat = RECHERCHEPIECE;
+					}
+									
 				break;					
 				default:
 				break;
@@ -375,7 +392,8 @@ public class DemoTp4 extends Demo {
 
 		int internalState = 0;
 		private void reposToChemin() {
-			boolean T[] = COULEURS.get(1);
+			boolean[] T = frontColors;
+			
 			switch(internalState){
 				case 0: 
 					if(T[VERT]) {
@@ -388,7 +406,7 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 2:
-					if(pivoter(Math.PI/4)) {
+					if(pivoter(Math.PI/2)) {
 						internalState = 0;
 						etat = RECHERCHEPASTILLEJAUNE;
 					}
@@ -414,19 +432,20 @@ public class DemoTp4 extends Demo {
 		
 		public double compteur = 0;
 		public boolean pivoter(double angle) {
-			double alpha = 0.2; //Ya de la latence
-			if(compteur < 1-alpha) {
-				ANGLE = angle;
-				VITESSE = 0;
-				compteur += tic;
-				return false;
-			} else {
+			ANGLE = angle;
+			VITESSE = 0;
+			compteur += tac;
+			
+			if(compteur >= angle/getRotationalVelocity()) {
 				ANGLE = 0;
 				VITESSE = VMAX;
 				compteur = 0;
 				return true;
-			}
+			}			
+				
+			return false;
 		}
+		
 	}
 	
 	
