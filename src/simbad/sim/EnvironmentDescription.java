@@ -106,8 +106,12 @@ public class EnvironmentDescription {
     
     /** Add a object (Agent or BlockWorldObject). */
     public void add(Object object){
-
         objects.add(object);
+    }
+    
+    /** Remove a object (Agent or BlockWorldObject). */
+    public void remove(Object object) {
+    	objects.remove(object);
     }
     
    public void light1SetPosition(double x,double y,double z){

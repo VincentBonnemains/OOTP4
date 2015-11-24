@@ -56,7 +56,9 @@ public  class SimpleAgent extends BaseObject {
      /** The agent's sensors */
     private ArrayList sensors;
     /** The agent's actuators */
-    private ArrayList actuators; 
+    private ArrayList actuators;
+    /** The agent's picked up boxes */
+    private ArrayList<Piece2> boxes; 
     
     
      /** Bounds for collision detection */
@@ -137,6 +139,7 @@ public  class SimpleAgent extends BaseObject {
         startPosition = new Vector3d(pos);
         sensors = new ArrayList();
         actuators= new ArrayList();
+        boxes= new ArrayList<>();
        // interactingAgents = new ArrayList();
        
         // reserve collision detection stuff
@@ -425,7 +428,6 @@ public  class SimpleAgent extends BaseObject {
 	 * @return the num of the sensor
 	 */
 	protected int  addSensorDevice(SensorDevice sd,Vector3d position,double angle){
-
 	    sensors.add(sd);
 	    sd.setOwner(this);
 	    sd.translateTo(position);
@@ -433,6 +435,43 @@ public  class SimpleAgent extends BaseObject {
         addChild(sd);
         return sensors.size()-1;
 	}
+	
+	/**
+	 * Adds a piece device to the agent.
+	 * @param p - the device.
+	 * @param position - its position relative to agent's center.
+	 * @param angle - its angle in the XZ plane.
+	 * @return the num of the sensor
+	 */
+	protected int addPieceDevice(Piece2 p,Vector3d position,double angle){
+		if(!boxes.contains(p)) {
+		    boxes.add(p);
+		    //sd.setOwner(this);
+		    Vector3d pos = new Vector3d();
+		    for(Piece2 pi:boxes){
+		    	//pos.  += pi.translation
+		    }
+		    p.translateTo(position);
+	        p.rotateY((float)angle);
+	        
+	        addChild(p);
+	        return boxes.size()-1;
+		} else {
+			return boxes.indexOf(p);
+		}
+	}
+	
+	/**
+	 * Remove a piece device to the agent.
+	 * @param p - the device.
+	 */
+	protected void removePieceDevice(Piece2 p){
+		removeChild(p);
+		p.detach();
+	    boxes.remove(p);
+	    
+	}
+	
 	/**
 	 * Adds a actuator device to the agent.
 	 * @param num - the requested position in the sensor list.

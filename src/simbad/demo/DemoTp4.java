@@ -59,9 +59,12 @@ import utils.RobotUtils;
  */
 public class DemoTp4 extends Demo {
 
+	public DemoTp4 getInstance() {
+		return this;
+	}
 	
-	ArrayList petites_pieces = new ArrayList<>();
-	ArrayList grandes_pieces = new ArrayList<>();
+	ArrayList<Piece2> petites_pieces = new ArrayList<>();
+	ArrayList<Piece2> grandes_pieces = new ArrayList<>();
 	public class Robot extends Agent {
 		/*******************************************************
 		 * ATTRIBUTES ******************************************
@@ -72,13 +75,13 @@ public class DemoTp4 extends Demo {
 		double elapsed;
 
 		Point3d position,current_position;
-		ArrayList sac = new ArrayList<>();
+		ArrayList<Piece2> sac = new ArrayList<Piece2>();
         double tic = 0.01,tac=0;
 		
 
 		double ANGLE = 0;
 		double nbPiecesPortees = 0;
-		public double VMAX = 1;
+		public double VMAX = 1.4;
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
 		double compteurblanc = 0.0;
@@ -88,7 +91,7 @@ public class DemoTp4 extends Demo {
     	int nbCameraSensors = 3;
 		boolean frontColors[] = new boolean[nbColors];
 		int ramassage = 0,depot = 0;
-		ArrayList enRamassage = new ArrayList<>();
+		ArrayList<Piece2> enRamassage = new ArrayList<Piece2>();
     	ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		public boolean retrouverChemin = false;
 		
@@ -102,13 +105,15 @@ public class DemoTp4 extends Demo {
 		JPanel panel;
         JInternalFrame window;
         
+        DemoTp4 demo;
         /*******************************************************
          * END ATTRIBUTES **************************************
          *******************************************************/
         
         
-        public Robot(Vector3d position, String name) {
+        public Robot(DemoTp4 demo,Vector3d position, String name) {
             super(position, name);
+            this.demo = demo;
             utils = new RobotUtils(this);
             //sensors = RobotFactory.addCameraBeltSensor(this,sensors);
             frontSensor = RobotFactory.addCameraSensor(this);
@@ -147,10 +152,13 @@ public class DemoTp4 extends Demo {
 
         /** Perform one step of Agent's Behavior */
         public void performBehavior() {
+        	
         	tac = getLifeTime() - elapsed;
             if (tac >= tic) {
+    			
+
 	            getCoords(current_position);
-	            System.out.println(plein+" "+aRamasse+" "+ramassePetitouGrand+" "+getState()+" "+resteGrand);
+	           // System.out.println(plein+" "+aRamasse+" "+ramassePetitouGrand+" "+getState()+" "+resteGrand);
 				machineAEtat();
             	setTranslationalVelocity(VITESSE*(1-nbPiecesPortees*0.05));
 	            setRotationalVelocity(ANGLE);
@@ -169,7 +177,6 @@ public class DemoTp4 extends Demo {
         }
     	
         public void suiviDeLigne() {
-//        	boolean[] T = COULEURS.get(1);
         	boolean[] T = frontColors;
         	
         	if(T[NOIR]) {
@@ -191,27 +198,72 @@ public class DemoTp4 extends Demo {
         	compteurblanc += tic;
         }
         
-        public void ramasser(Piece2 b){
-        	Point3d p = new Point3d();
+        double zoffset_p=0;
+        double zoffset_g=0;
+        
+        public void ramasser(Piece2 piece){
+        	
+        	Vector3d pos;
+        	if(piece.type == 0) {
+        		sac.add(piece);
+	        	for(Piece2 p:sac){
+	        		zoffset_p += p.getRadius();
+	        	}
+	        	pos = new Vector3d(2+zoffset_p,-0.3,0); 
+	        	remove(piece);
+	         	piece.detach();
+	         	
+	         	addPieceDevice(piece,pos,0);
+        	}
+        	else {
+        		sac.add(piece);
+        		for(Piece2 p:sac){
+	        		zoffset_g += p.getRadius();
+	        	}
+        		pos = new Vector3d(zoffset_p + zoffset_g,-0.3,-3); 
+        		remove(piece);
+             	piece.detach();
+             	
+             	addPieceDevice(piece,pos,0);
+        	}        	       	
+        	
+        	/*Point3d p = new Point3d();
         	b.getCoords(p);
-        	b.moveToPosition(new Vector3d(p.x,p.y+0.1,p.z));
+        	b.moveToPosition(new Vector3d(p.x,p.y+0.1,p.z));*/
         }
         
-        public void deposer(Piece2 b){
-        	Point3d p = new Point3d();
-        	b.getCoords(p);
-        	b.moveToPosition(new Vector3d(p.x,p.y-0.1,p.z));
+        public void deposer(Piece2 piece) {
+        	System.out.println("DEPOSER");
+        	Point3d posPieceRelative = new Point3d();
+        	Point3d posRobotAbsolu   = new Point3d();
+        	piece.getCoords(posPieceRelative);
+        	getCoords(posRobotAbsolu);
+        	
+        	
+        	removePieceDevice(piece);
+       	
+        	double x = posRobotAbsolu.x;
+        	double y = posRobotAbsolu.y; //+ posPieceRelative.y;
+        	double z = posRobotAbsolu.z;
+        	System.out.println(posRobotAbsolu.x+" "+posRobotAbsolu.y+" "+posRobotAbsolu.z);
+        	System.out.println(posPieceRelative.x+" "+posPieceRelative.y+" "+posPieceRelative.z);
+        	System.out.println(x+" "+y+" "+z);
+        	piece.moveToPosition(new Vector3d(x,y,z));
+        	demo.add(piece);
+        	
+        	
+        	//b.moveToPosition(new Vector3d(p.x,p.y-0.1,p.z));
         }
 	
 		public void deplacerObjets(){
-			Piece2 b;
+			/*Piece2 b;
 			Point3d p = new Point3d();
 			double x,y;
 			for(int i = 0;i < sac.size();++i){
 				b = (Piece2)sac.get(i);
 				b.getCoords(p);
 				b.translateTo(new Vector3d(current_position.x-position.x,0,current_position.z-position.z));
-			}
+			}*/
 		}
     
 		/******************************************************************************************************************************
@@ -269,44 +321,61 @@ public class DemoTp4 extends Demo {
 			ANGLE = 0;
 		}
 
-		private void depose() {
-			plein = false;
-			VITESSE = 0;
-			//Si depot petites pieces
-			if(++depot < 7){
-				if(sac.size()>3){
-					for(int i = 0;i < 3;++i)
-						deposer((Piece2)sac.get(i));
-				}
-				else{
-					for(int i = 0;i < sac.size();++i)
-						deposer((Piece2)sac.get(i));
-				}
-				return;
-			}
-			else if(++depot < 9){
-				if(sac.size()>3){
-					for(int i = 0;i < 3;++i)
-						sac.remove(0);
-				}
-				else{
-					int j = sac.size();
-					for(int i = 0;i < j;++i)
-						sac.remove(0);
-				}
-			}
+		private void depose() {			
 			switch(internalState){
-			case 0:
-				if(pivoter(Math.PI))
+				case 0:
+					plein = false;
+					VITESSE = 0;
+					/*if(++depot < 7){
+						if(sac.size()>3){
+							for(int i = 0;i < 3;++i)
+								deposer(sac.get(i));
+						}
+						else{
+							for(int i = 0;i < sac.size();++i)
+								deposer(sac.get(i));
+						}
+						return;
+					}
+					else if(++depot < 9){
+						if(sac.size()>3){
+							for(int i = 0;i < 3;++i)
+								sac.remove(0);
+						}
+						else{
+							int j = sac.size();
+							for(int i = 0;i < j;++i)
+								sac.remove(0);
+						}
+					}*/
+					if(depot == 0) { //Deposer toute les petites pieces
+						for(int i=0;i<3;i++) {
+							deposer(sac.get(i));							
+							depot++;
+						}
+						for(int i=0;i<3;i++)
+							sac.remove(i);
+					} else {
+						for(Piece2 p:sac) {
+							deposer(p);
+							
+							depot++;
+						}
+						sac.clear();
+					}
 					internalState++;
 				break;
-			case 1:
-				depot = 0;
-				plein = false;
-				internalState = 0;
-				etat = RECHERCHEREPOS;
-				break;
-			}
+				case 1:
+					if(pivoter(Math.PI))
+						internalState++;
+					break;
+				case 2:
+					//depot = 0;
+					plein = false;
+					internalState = 0;
+					etat = RECHERCHEREPOS;
+					break;
+				}
 		}
 
 
@@ -365,8 +434,6 @@ public class DemoTp4 extends Demo {
 		}
 
 		private void reposToZonePP() {
-			/*VITESSE = VMAX;
-			ANGLE   = 0;*/
 			boolean[] T = frontColors;
 			switch(internalState){
 				case 0:
@@ -375,7 +442,6 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 1:
-					System.out.println("detecté");
 					if(roulerPendantDistance(1.5)) {
 						internalState++;
 					}
@@ -450,58 +516,67 @@ public class DemoTp4 extends Demo {
 
 
 		private void ramasse() {
-			aRamasse = true;
-			if(ramassePetitouGrand == 1) {
-				plein = true;
-			}
-			//nbPiecesPortees = 3;
-
-			int i,j;
 			VITESSE = 0;
-			Random rand = new Random();
-			if(ramassage == 0){
-				switch(ramassePetitouGrand){
-					case 0:
-						for(i = 0;i < 3;++i){
-							enRamassage.add(petites_pieces.get(0));
-							petites_pieces.remove(0);
-						}
-					break;
-					default:
-						j = (rand.nextInt(3))+1;
-						if(j > grandes_pieces.size())
-							j = grandes_pieces.size();
-						for(i = 0;i < j;++i){
-							enRamassage.add(grandes_pieces.get(0));
-							grandes_pieces.remove(0);
-						}	
-				}
-			}
-			if(++ramassage < 7){
-				for(i = 0;i < enRamassage.size();++i)
-					ramasser((Piece2)enRamassage.get(i));
-				return;
-			}
 			switch(internalState){
 				case 0:
+					aRamasse = true;
+					if(ramassePetitouGrand == 1) {
+						plein = true;
+					}
+					
+					Random rand = new Random();
+					//if(ramassage == 0){
+						switch(ramassePetitouGrand){
+							case 0:
+								for(Piece2 p:petites_pieces){
+									//enRamassage.add(petites_pieces.get(i));
+									ramasser(p);									
+									ramassage++;
+								}
+								petites_pieces.clear();
+							break;
+							case 1:
+								
+								int j = (rand.nextInt(3))+1;
+								if(j > grandes_pieces.size())
+									j = grandes_pieces.size();
+								for(int i=0; i<j; i++){
+									//enRamassage.add(grandes_pieces.get(i));
+									ramasser(grandes_pieces.get(0));
+									grandes_pieces.remove(0);
+									ramassage++;
+								}
+							break;
+							default:
+								break;
+						//}
+					}
+					/*if(++ramassage < 7){
+						for(i = 0;i < enRamassage.size();++i)
+							ramasser((Piece2)enRamassage.get(i));
+						return;
+					}*/
+					internalState++;
+				break;
+				
+				case 1:
 					if(pivoter(Math.PI)) {
-						int k = enRamassage.size();
+						/*int k = enRamassage.size();
 						for(i = 0;i <k ;++i){
 							sac.add(enRamassage.get(0));
 							enRamassage.remove(0);
 							//VITESSE -= 0.166;
-						}
+						}*/
 						if(ramassePetitouGrand == 1){
 							if(rangeSensor.getBackQuadrantMeasurement() <= (1+(grandes_pieces.size())*0.15))
 								resteGrand = true;
 							else
 								resteGrand = false;
-						}
-							
+						}							
 						internalState++;
 					}
 				break;
-				case 1:
+				case 2:
 					ramassage = 0;
 					aRamasse = true;
 					internalState = 0;
@@ -542,14 +617,11 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 1:
-					System.out.println("dac");
 					if(roulerPendantDistance(0.25)) {
 						internalState++;
 					}
-					System.out.println("aie");
 				break;
 				case 2:
-					System.out.println("cool");
 					if(aRamasse) {
 						if(ramassePetitouGrand == 0){
 							if(pivoter(Math.PI/2)) {
@@ -568,11 +640,9 @@ public class DemoTp4 extends Demo {
 							}
 						}
 						else{
-							System.out.println("ok");
 							if(pivoter(Math.PI/2)) {
 								internalState++;							
 							}
-							System.out.println("ik");
 						}
 					}
 				break;
@@ -598,6 +668,7 @@ public class DemoTp4 extends Demo {
 
 		int internalState = 0;
 		private void reposToChemin() {
+			
 			boolean[] T = frontColors;
 			
 			switch(internalState){
@@ -652,7 +723,7 @@ public class DemoTp4 extends Demo {
 			ANGLE = angle;
 			VITESSE = 0;
 			compteur += tac;
-			System.out.println("pivot "+(compteur >= Math.abs(angle/getRotationalVelocity()))+" "+compteur+" "+Math.abs(angle/getRotationalVelocity()));
+			//System.out.println("pivot "+(compteur >= Math.abs(angle/getRotationalVelocity()))+" "+compteur+" "+Math.abs(angle/getRotationalVelocity()));
 			if(compteur >= Math.abs(angle/getRotationalVelocity())) {
 				ANGLE = 0;
 				VITESSE = VMAX;
@@ -762,34 +833,35 @@ public class DemoTp4 extends Demo {
         add(gp3);
         */
 
-        add(new Robot(new Vector3d(0,0.1,-11), "robot 1"));
+        add(new Robot(this,new Vector3d(0,0.1,-11), "robot 1"));
 
         
         //Creations pièces
         //petites
         
-        Piece2 pp1 = new Piece2(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
+        Piece2 pp1 = new Piece2(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
         add(pp1);
         petites_pieces.add(pp1);
-        Piece2 pp2 = new Piece2(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
+        Piece2 pp2 = new Piece2(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
         add(pp2);
         petites_pieces.add(pp2);
-        Piece2 pp3 = new Piece2(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f));
+        Piece2 pp3 = new Piece2(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
         add(pp3);
         petites_pieces.add(pp3);
         
         
       //grandes
-        Piece2 gp1 = new Piece2(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
+        Piece2 gp1 = new Piece2(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
         add(gp1);
-        Piece2 gp2 = new Piece2(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
+        Piece2 gp2 = new Piece2(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
         add(gp2);
-        Piece2 gp3 = new Piece2(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f));
+        Piece2 gp3 = new Piece2(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
         add(gp3);
         grandes_pieces.add(gp3);
         grandes_pieces.add(gp2);
         grandes_pieces.add(gp1);
         genererCoins();
+        
     }
     
     public class Point {
@@ -817,7 +889,7 @@ public class DemoTp4 extends Demo {
     	double borne = Math.PI/2; 
     	
     	for(Point p : centres) {    		
-    		for(double alpha=-borne+Math.PI/2; alpha>-borne; alpha -= pas){
+    		for(double alpha=-borne+Math.PI/2; alpha>-borne; alpha -= pas) {
         		x = p.x + r * Math.cos(alpha);
         		y = p.y + r * Math.sin(alpha);
         		Box tmp = new Box(new Vector3d(x,0.01,y),new Vector3f(0.2f,0,0.2f),this, new Color3f(0.f,0.f,0.f));

@@ -170,7 +170,15 @@ public  abstract class BaseObject {
         }
         // Create group to attach all gemotries
         group = new Group();
+       // group.setCapability(Group.ALLOW_LOCAL_TO_VWORLD_READ);
         group.setCapability(Group.ALLOW_LOCAL_TO_VWORLD_READ);
+        group.setCapability(Group.ALLOW_CHILDREN_EXTEND);
+        group.setCapability(Group.ALLOW_COLLIDABLE_READ);
+        group.setCapability(Group.ALLOW_COLLIDABLE_WRITE);
+        group.setCapability(Group.ALLOW_PICKABLE_READ);
+        group.setCapability(Group.ALLOW_PICKABLE_WRITE);
+        group.setCapability(Group.ALLOW_CHILDREN_READ);
+        group.setCapability(Group.ALLOW_CHILDREN_WRITE);
         // we want to setup the bounds manually
         group.setBoundsAutoCompute(false);
      //   group.setCapability(Group.ALLOW_BOUNDS_READ); // No more needed, use localBounds
@@ -187,6 +195,10 @@ public  abstract class BaseObject {
 
     protected void addChild(BaseObject object) {
         group.addChild(object.getNode());
+    }
+    
+    protected void removeChild(BaseObject object) {
+    	group.removeChild(object.getNode());
     }
 
     final void addChild(Node node) {

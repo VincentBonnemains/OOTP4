@@ -22,13 +22,16 @@ import com.sun.j3d.utils.geometry.Primitive;
 public class Piece2 extends SimpleAgent{
 	float x,y,z,px,py,pz;
 	Color3f c;
+	public int type;
 
-	public Piece2(Vector3d pos,Vector3f extent, String name,Color3f c) {
+	
+	public Piece2(Vector3d pos,Vector3f extent, String name,Color3f c, int type) {
 		super(pos, name);
 		x = extent.x;
 		y = extent.y;
 		z = extent.z;
 		this.c = c;
+		this.type = type;
 	}
 	
 	/** Create 3D geometry. */
