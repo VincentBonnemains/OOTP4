@@ -58,7 +58,7 @@ public  class SimpleAgent extends BaseObject {
     /** The agent's actuators */
     private ArrayList actuators;
     /** The agent's picked up boxes */
-    private ArrayList<Piece2> boxes; 
+    private ArrayList<Piece> boxes; 
     
     
      /** Bounds for collision detection */
@@ -443,12 +443,12 @@ public  class SimpleAgent extends BaseObject {
 	 * @param angle - its angle in the XZ plane.
 	 * @return the num of the sensor
 	 */
-	protected int addPieceDevice(Piece2 p,Vector3d position,double angle){
+	protected int addPieceDevice(Piece p,Vector3d position,double angle){
 		if(!boxes.contains(p)) {
 		    boxes.add(p);
 		    //sd.setOwner(this);
 		    Vector3d pos = new Vector3d();
-		    for(Piece2 pi:boxes){
+		    for(Piece pi:boxes){
 		    	//pos.  += pi.translation
 		    }
 		    p.translateTo(position);
@@ -465,7 +465,7 @@ public  class SimpleAgent extends BaseObject {
 	 * Remove a piece device to the agent.
 	 * @param p - the device.
 	 */
-	protected void removePieceDevice(Piece2 p){
+	protected void removePieceDevice(Piece p){
 		removeChild(p);
 		p.detach();
 	    boxes.remove(p);

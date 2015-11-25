@@ -22,18 +22,21 @@ import com.sun.j3d.utils.geometry.Primitive;
 public class Piece extends SimpleAgent{
 	float x,y,z,px,py,pz;
 	Color3f c;
+	public int type;
 
-	public Piece(Vector3d pos,Vector3f extent, String name,Color3f c) {
+	
+	public Piece(Vector3d pos,Vector3f extent, String name,Color3f c, int type) {
 		super(pos, name);
 		x = extent.x;
 		y = extent.y;
 		z = extent.z;
 		this.c = c;
+		this.type = type;
 	}
 	
 	/** Create 3D geometry. */
 	protected void create3D() {
-		int length =  24;
+		int length =  64;
 		int tab[]=new int[1];
 		tab[0]=length;
 		QuadArray quad=new QuadArray(length,QuadArray.COORDINATES|QuadArray.COLOR_3);
@@ -48,6 +51,26 @@ public class Piece extends SimpleAgent{
 		Point3f supHautGauche = new Point3f(+(x/2),y,-(z/2));
 		Point3f supHautDroit = new Point3f(+(x/2),y,+(z/2));
 		
+		Point3f miinfBasGauche = new Point3f(-(x/2),y/4,-(z/2));
+		Point3f miinfBasDroit = new Point3f(-(x/2),y/4,+(z/2));
+		Point3f miinfHautGauche = new Point3f(+(x/2),y/4,-(z/2));
+		Point3f miinfHautDroit = new Point3f(+(x/2),y/4,+(z/2));
+		
+		Point3f misupBasGauche = new Point3f(-(x/2),3*y/4,-(z/2));
+		Point3f misupBasDroit = new Point3f(-(x/2),3*y/4,+(z/2));
+		Point3f misupHautGauche = new Point3f(+(x/2),3*y/4,-(z/2));
+		Point3f misupHautDroit = new Point3f(+(x/2),3*y/4,+(z/2));
+		
+		Point3f interinfBasGauche = new Point3f(-(x/2),y/4,-(z/4));
+		Point3f interinfBasDroit = new Point3f(-(x/2),y/4,+(z/4));
+		Point3f interinfHautGauche = new Point3f(+(x/2),y/4,-(z/4));
+		Point3f interinfHautDroit = new Point3f(+(x/2),y/4,+(z/4));
+		
+		Point3f intersupBasGauche = new Point3f(-(x/2),3*y/4,-(z/4));
+		Point3f intersupBasDroit = new Point3f(-(x/2),3*y/4,+(z/4));
+		Point3f intersupHautGauche = new Point3f(+(x/2),3*y/4,-(z/4));
+		Point3f intersupHautDroit = new Point3f(+(x/2),3*y/4,+(z/4));
+		
 		/* face 1              infBasGauche, infBasDroit, infHautDroit, infHautGauche,
 		/* face 2              infBasGauche, supBasGauche, supHautGauche, infHautGauche,
 		/* face 3              infBasDroit, supBasDroit, supHautDroit, infHautDroit,
@@ -58,14 +81,26 @@ public class Piece extends SimpleAgent{
 		
 		quad.setCoordinates(0, new Point3f[] {
 				/* face 1*/              infBasGauche, infBasDroit, infHautDroit, infHautGauche,
-				/* face 2*/            infBasGauche, supBasGauche, supHautGauche, infHautGauche,
-				/* face 3*/              infBasDroit, supBasDroit, supHautDroit, infHautDroit,
-				/* face 4*/              supBasGauche, supBasDroit, supHautDroit, supHautGauche,
-				/* face 5*/ 			 infBasGauche, infBasDroit, supBasDroit, supBasGauche,
-				/* face 6*/ 			 infHautGauche, infHautDroit, supHautDroit, supHautGauche,
+				/* face 2*/              infBasGauche, miinfBasGauche, miinfHautGauche, infHautGauche,
+				/* face 3*/              infBasDroit, miinfBasDroit, miinfHautDroit, infHautDroit,
+				/* face 4*/              miinfBasGauche, miinfBasDroit, miinfHautDroit, miinfHautGauche,
+				/* face 5*/ 			 infBasGauche, infBasDroit, miinfBasDroit, miinfBasGauche,
+				/* face 6*/ 			 infHautGauche, infHautDroit, miinfHautDroit, miinfHautGauche,
+				
+				/* face 7*/              misupBasGauche, misupBasDroit, misupHautDroit, misupHautGauche,
+				/* face 8*/            	 misupBasGauche, supBasGauche, supHautGauche, misupHautGauche,
+				/* face 9*/              misupBasDroit, supBasDroit, supHautDroit, misupHautDroit,
+				/* face 10*/             supBasGauche, supBasDroit, supHautDroit, supHautGauche,
+				/* face 11*/ 			 misupBasGauche, misupBasDroit, supBasDroit, supBasGauche,
+				/* face 12*/ 			 misupHautGauche, misupHautDroit, supHautDroit, supHautGauche,
+				
+				/* face 13*/              interinfBasGauche, interinfBasDroit, intersupHautDroit, intersupHautGauche,
+				/* face 14*/           	  interinfBasGauche, intersupBasGauche, intersupHautGauche, interinfHautGauche,
+				/* face 15*/              interinfBasDroit, intersupBasDroit, intersupHautDroit, interinfHautDroit,
+				/* face 16*/              interinfBasGauche, interinfBasDroit, intersupHautDroit, intersupHautGauche,
 				});
 
-		for(int i=1;i<24;i++){ quad.setColor(i,c);}
+		for(int i=1;i<length;i++){ quad.setColor(i,c);}
 		
 
 		Appearance app=new Appearance();

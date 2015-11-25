@@ -46,7 +46,7 @@ import simbad.sim.Box;
 import simbad.sim.CameraSensor;
 import simbad.sim.PastilleAgent;
 import simbad.sim.Piece;
-import simbad.sim.Piece2;
+import simbad.sim.Piece;
 import simbad.sim.RangeSensorBelt;
 import simbad.sim.RobotFactory;
 import simbad.sim.Wall;
@@ -63,8 +63,8 @@ public class DemoTp4 extends Demo {
 		return this;
 	}
 	
-	ArrayList<Piece2> petites_pieces = new ArrayList<>();
-	ArrayList<Piece2> grandes_pieces = new ArrayList<>();
+	ArrayList<Piece> petites_pieces = new ArrayList<>();
+	ArrayList<Piece> grandes_pieces = new ArrayList<>();
 	public class Robot extends Agent {
 		/*******************************************************
 		 * ATTRIBUTES ******************************************
@@ -75,7 +75,8 @@ public class DemoTp4 extends Demo {
 		double elapsed;
 
 		Point3d position,current_position;
-		ArrayList<Piece2> sac = new ArrayList<Piece2>();
+		ArrayList<Piece> petit_sac = new ArrayList<Piece>();
+		ArrayList<Piece> gros_sac  = new ArrayList<Piece>();
         double tic = 0.01,tac=0;
 		
 
@@ -91,7 +92,7 @@ public class DemoTp4 extends Demo {
     	int nbCameraSensors = 3;
 		boolean frontColors[] = new boolean[nbColors];
 		int ramassage = 0,depot = 0;
-		ArrayList<Piece2> enRamassage = new ArrayList<Piece2>();
+		ArrayList<Piece> enRamassage = new ArrayList<Piece>();
     	ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
 		public boolean retrouverChemin = false;
 		
@@ -154,11 +155,8 @@ public class DemoTp4 extends Demo {
         public void performBehavior() {
         	
         	tac = getLifeTime() - elapsed;
-            if (tac >= tic) {
-    			
-
+            if (tac >= tic) {            	
 	            getCoords(current_position);
-	           // System.out.println(plein+" "+aRamasse+" "+ramassePetitouGrand+" "+getState()+" "+resteGrand);
 				machineAEtat();
             	setTranslationalVelocity(VITESSE*(1-nbPiecesPortees*0.05));
 	            setRotationalVelocity(ANGLE);
@@ -167,11 +165,10 @@ public class DemoTp4 extends Demo {
             	frontColors = utils.colorsDetected(frontMatrix);
             	panel.repaint();
             	/* ***************************** */
-            	deplacerObjets();
             	getCoords(position);
             	elapsed = getLifeTime();
             }            
-            if (collisionDetected()){
+            if (collisionDetected()) {
             	setTranslationalVelocity(0);
             }
         }
@@ -193,46 +190,36 @@ public class DemoTp4 extends Demo {
     				sens = -sens;        				
     			}
     			ANGLE = sens*Math.PI/coef;
-        	}
-        	
+        	}        	
         	compteurblanc += tic;
         }
         
-        double zoffset_p=0;
-        double zoffset_g=0;
-        
-        public void ramasser(Piece2 piece){
-        	
+        double zoffset_p;
+        double zoffset_g;        
+        public void ramasser(Piece piece) {     	
         	Vector3d pos;
         	if(piece.type == 0) {
-        		sac.add(piece);
-	        	for(Piece2 p:sac){
-	        		zoffset_p += p.getRadius();
-	        	}
-	        	pos = new Vector3d(2+zoffset_p,-0.3,0); 
+        		petit_sac.add(piece);
+        		zoffset_p = 2 + petit_sac.size() * (petit_sac.get(0).getRadius()+0.03);
+	        	pos = new Vector3d(zoffset_p,-2,0);
 	        	remove(piece);
 	         	piece.detach();
 	         	
 	         	addPieceDevice(piece,pos,0);
         	}
         	else {
-        		sac.add(piece);
-        		for(Piece2 p:sac){
-	        		zoffset_g += p.getRadius();
-	        	}
-        		pos = new Vector3d(zoffset_p + zoffset_g,-0.3,-3); 
+        		if(petit_sac.size() == 0) zoffset_p = 2;         		
+        		gros_sac.add(piece);
+        		zoffset_g = (gros_sac.size()-1) * (gros_sac.get(0).getRadius()+0.03);
+        		pos = new Vector3d(zoffset_p + zoffset_g - 1.5,-0.3,-4); 
         		remove(piece);
              	piece.detach();
              	
              	addPieceDevice(piece,pos,0);
-        	}        	       	
-        	
-        	/*Point3d p = new Point3d();
-        	b.getCoords(p);
-        	b.moveToPosition(new Vector3d(p.x,p.y+0.1,p.z));*/
+        	}
         }
         
-        public void deposer(Piece2 piece) {
+        public void deposer(Piece piece) {
         	System.out.println("DEPOSER");
         	Point3d posPieceRelative = new Point3d();
         	Point3d posRobotAbsolu   = new Point3d();
@@ -242,29 +229,16 @@ public class DemoTp4 extends Demo {
         	
         	removePieceDevice(piece);
        	
-        	double x = posRobotAbsolu.x;
-        	double y = posRobotAbsolu.y; //+ posPieceRelative.y;
-        	double z = posRobotAbsolu.z;
+        	double x = posRobotAbsolu.x + posPieceRelative.x;
+        	double y = posRobotAbsolu.y + posPieceRelative.y;
+        	double z = posRobotAbsolu.z + posPieceRelative.z;
         	System.out.println(posRobotAbsolu.x+" "+posRobotAbsolu.y+" "+posRobotAbsolu.z);
         	System.out.println(posPieceRelative.x+" "+posPieceRelative.y+" "+posPieceRelative.z);
         	System.out.println(x+" "+y+" "+z);
         	piece.moveToPosition(new Vector3d(x,y,z));
         	demo.add(piece);
         	
-        	
-        	//b.moveToPosition(new Vector3d(p.x,p.y-0.1,p.z));
         }
-	
-		public void deplacerObjets(){
-			/*Piece2 b;
-			Point3d p = new Point3d();
-			double x,y;
-			for(int i = 0;i < sac.size();++i){
-				b = (Piece2)sac.get(i);
-				b.getCoords(p);
-				b.translateTo(new Vector3d(current_position.x-position.x,0,current_position.z-position.z));
-			}*/
-		}
     
 		/******************************************************************************************************************************
 		/******************************************************************************************************************************
@@ -326,42 +300,12 @@ public class DemoTp4 extends Demo {
 				case 0:
 					plein = false;
 					VITESSE = 0;
-					/*if(++depot < 7){
-						if(sac.size()>3){
-							for(int i = 0;i < 3;++i)
-								deposer(sac.get(i));
-						}
-						else{
-							for(int i = 0;i < sac.size();++i)
-								deposer(sac.get(i));
-						}
-						return;
-					}
-					else if(++depot < 9){
-						if(sac.size()>3){
-							for(int i = 0;i < 3;++i)
-								sac.remove(0);
-						}
-						else{
-							int j = sac.size();
-							for(int i = 0;i < j;++i)
-								sac.remove(0);
-						}
-					}*/
-					if(depot == 0) { //Deposer toute les petites pieces
-						for(int i=0;i<3;i++) {
-							deposer(sac.get(i));							
-							depot++;
-						}
-						for(int i=0;i<3;i++)
-							sac.remove(i);
+					if(petit_sac.size() > 0) {
+						for(Piece p:petit_sac)	deposer(p);
+						petit_sac.clear();
 					} else {
-						for(Piece2 p:sac) {
-							deposer(p);
-							
-							depot++;
-						}
-						sac.clear();
+						for(Piece p:gros_sac)  deposer(p);							
+						gros_sac.clear();
 					}
 					internalState++;
 				break;
@@ -370,7 +314,6 @@ public class DemoTp4 extends Demo {
 						internalState++;
 					break;
 				case 2:
-					//depot = 0;
 					plein = false;
 					internalState = 0;
 					etat = RECHERCHEREPOS;
@@ -390,44 +333,34 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 1:
-					System.out.println("detecté");
 					if(roulerPendantDistance(1.5)) {
 						internalState++;
 					}
 				break;
 				case 2:
-					System.out.println("ok");
-					if(sac.size() > 3) {
+					if(petit_sac.size() > 0) { //HAUT ET GAUCHE
 						if(pivoter(-Math.PI/2)) {
 							internalState = 0;
 							etat = REPOSTOZONEPP;
 						}
-					}
-					else{
-						if(restePetit){
-							restePetit = false;
+					} else if(petit_sac.size() == 0 && restePetit) { //Chemin de petite zone vers grande zone		DE DROITE A GAUCHE	
+						restePetit = false;
+						internalState = 0;
+						etat = REPOSTOZONEGP;						
+					} else if(gros_sac.size() == 0 && resteGrand){
+						if(pivoter(-Math.PI/2)){
+							internalState = 0;
+							etat = REPOSTOCHEMIN;
+						}
+					} else if(gros_sac.size() > 0) {
+						if(pivoter(Math.PI/2)) {
 							internalState = 0;
 							etat = REPOSTOZONEGP;
 						}
-						else if(sac.size() == 0){
-							if(resteGrand){
-								if(pivoter(-Math.PI/2)){
-									internalState = 0;
-									etat = REPOSTOCHEMIN;
-								}
-							}
-							else{
-								internalState = 0;
-								etat =FIN;
-							}
-						}
-						else{
-							if(pivoter(Math.PI/2)) {
-								internalState = 0;
-								etat = REPOSTOZONEGP;
-							}
-						}	
-					}
+					} else {
+						internalState = 0;
+						etat = FIN;
+					}				
 				break;
 			}
 			
@@ -516,6 +449,7 @@ public class DemoTp4 extends Demo {
 
 
 		private void ramasse() {
+			System.out.println("Devant: " + rangeSensor.getFrontQuadrantMeasurement());
 			VITESSE = 0;
 			switch(internalState){
 				case 0:
@@ -525,23 +459,19 @@ public class DemoTp4 extends Demo {
 					}
 					
 					Random rand = new Random();
-					//if(ramassage == 0){
 						switch(ramassePetitouGrand){
-							case 0:
-								for(Piece2 p:petites_pieces){
-									//enRamassage.add(petites_pieces.get(i));
+							case 0: //On ramasse les petites
+								for(Piece p:petites_pieces){
 									ramasser(p);									
 									ramassage++;
 								}
 								petites_pieces.clear();
 							break;
-							case 1:
-								
+							case 1://On ramasse les grandes								
 								int j = (rand.nextInt(3))+1;
 								if(j > grandes_pieces.size())
 									j = grandes_pieces.size();
 								for(int i=0; i<j; i++){
-									//enRamassage.add(grandes_pieces.get(i));
 									ramasser(grandes_pieces.get(0));
 									grandes_pieces.remove(0);
 									ramassage++;
@@ -549,31 +479,21 @@ public class DemoTp4 extends Demo {
 							break;
 							default:
 								break;
-						//}
 					}
-					/*if(++ramassage < 7){
-						for(i = 0;i < enRamassage.size();++i)
-							ramasser((Piece2)enRamassage.get(i));
-						return;
-					}*/
 					internalState++;
 				break;
 				
 				case 1:
 					if(pivoter(Math.PI)) {
-						/*int k = enRamassage.size();
-						for(i = 0;i <k ;++i){
-							sac.add(enRamassage.get(0));
-							enRamassage.remove(0);
-							//VITESSE -= 0.166;
-						}*/
-						if(ramassePetitouGrand == 1){
-							if(rangeSensor.getBackQuadrantMeasurement() <= (1+(grandes_pieces.size())*0.15))
+						System.out.println("Derriere: " + rangeSensor.getBackQuadrantMeasurement());
+						if(ramassePetitouGrand == 1) {
+							if(rangeSensor.getBackQuadrantMeasurement() > 1.4)// (1.7+(grandes_pieces.size())*0.15))
 								resteGrand = true;
 							else
 								resteGrand = false;
-						}							
+							}							
 						internalState++;
+						System.out.println("resteGrand:"+resteGrand);
 					}
 				break;
 				case 2:
@@ -597,7 +517,11 @@ public class DemoTp4 extends Demo {
 		private void rechercherPiece() {
 			suiviDeLigne();
 			double d = rangeSensor.getFrontQuadrantMeasurement();
-			if(d < 2) {
+			System.out.println(d);
+			if(petit_sac.size() == 0 && d < 1) {
+				internalState = 0;
+				etat = RAMASSE;
+			} else if(d <= 1.7) {
 				internalState = 0;
 				etat = RAMASSE;
 			}
@@ -839,23 +763,23 @@ public class DemoTp4 extends Demo {
         //Creations pièces
         //petites
         
-        Piece2 pp1 = new Piece2(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
+        Piece pp1 = new Piece(new Vector3d(-1.275,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
         add(pp1);
         petites_pieces.add(pp1);
-        Piece2 pp2 = new Piece2(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
+        Piece pp2 = new Piece(new Vector3d(-1.125,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
         add(pp2);
         petites_pieces.add(pp2);
-        Piece2 pp3 = new Piece2(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
+        Piece pp3 = new Piece(new Vector3d(-0.975,0.01,0.05),new Vector3f(0.15f,0.38f,0.31f),null, new Color3f(1f,0.4f,0.f),0);
         add(pp3);
         petites_pieces.add(pp3);
         
         
       //grandes
-        Piece2 gp1 = new Piece2(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
+        Piece gp1 = new Piece(new Vector3d(1.275,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
         add(gp1);
-        Piece2 gp2 = new Piece2(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
+        Piece gp2 = new Piece(new Vector3d(1.125,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
         add(gp2);
-        Piece2 gp3 = new Piece2(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
+        Piece gp3 = new Piece(new Vector3d(0.975,0.01,4.05),new Vector3f(0.15f,0.55f,0.48f),null, new Color3f(0.6f,0.6f,0.6f),1);
         add(gp3);
         grandes_pieces.add(gp3);
         grandes_pieces.add(gp2);

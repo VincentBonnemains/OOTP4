@@ -109,7 +109,7 @@ public class RobotFactory extends Factory {
         double agentHeight = agent.getHeight();
         double agentRadius = agent.getRadius();
         RangeSensorBelt sonarBelt = new RangeSensorBelt((float) agentRadius,
-                0f, 1.5f, 9, RangeSensorBelt.TYPE_SONAR,0);
+                0f, 4f, 9, RangeSensorBelt.TYPE_SONAR,0);
         sonarBelt.setUpdatePerSecond(100);
         sonarBelt.setName("sonars");
         Vector3d pos = new Vector3d(0, agentHeight / 2, 0.0);
