@@ -492,14 +492,15 @@ public class DemoTp4 extends Demo {
 				case 1:
 					if(pivoter(Math.PI)) {
 						System.out.println("Derriere: " + rangeSensor.getBackQuadrantMeasurement());
-						if(ramassePetitouGrand == 1) {
-							if(rangeSensor.getBackQuadrantMeasurement() > 1.4)// (1.7+(grandes_pieces.size())*0.15))
+						double d = zoffset_p + zoffset_g + 0.10;
+						if(ramassePetitouGrand == 1) {							
+							if(rangeSensor.getBackQuadrantMeasurement() < d)// (1.7+(grandes_pieces.size())*0.15))
 								resteGrand = true;
 							else
 								resteGrand = false;
 							}							
 						internalState++;
-						System.out.println("resteGrand:"+resteGrand);
+						System.out.println("resteGrand:"+resteGrand+" d:"+d);
 					}
 				break;
 				case 2:
