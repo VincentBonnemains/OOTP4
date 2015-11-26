@@ -200,23 +200,26 @@ public class DemoTp4 extends Demo {
         	Vector3d pos;
         	if(piece.type == 0) {
         		petit_sac.add(piece);
-        		zoffset_p = 2 + petit_sac.size() * (petit_sac.get(0).getRadius()+0.03);
-	        	pos = new Vector3d(zoffset_p,-2,0);
-	        	remove(piece);
-	         	piece.detach();
+        		zoffset_p = 0.5 + petit_sac.size() * (petit_sac.get(0).getRadius()+0.1);
+	        	pos = new Vector3d(zoffset_p,0,0);
+        		/*remove(piece);
+	         	piece.detach();*/
 	         	
 	         	addPieceDevice(piece,pos,0);
         	}
         	else {
-        		if(petit_sac.size() == 0) zoffset_p = 2;         		
         		gros_sac.add(piece);
-        		zoffset_g = (gros_sac.size()-1) * (gros_sac.get(0).getRadius()+0.03);
-        		pos = new Vector3d(zoffset_p + zoffset_g - 1.5,-0.3,-4); 
-        		remove(piece);
-             	piece.detach();
-             	
+        		if(petit_sac.size() == 0) {
+        			zoffset_p = 0.5;
+        			zoffset_g = gros_sac.size() * (gros_sac.get(0).getRadius()+0.1);
+        		} else {
+        			zoffset_g = (gros_sac.size()) * (gros_sac.get(0).getRadius()+0.1);
+        		}
+        		
+        		pos = new Vector3d(zoffset_p + zoffset_g,0,0); 
              	addPieceDevice(piece,pos,0);
         	}
+        	System.out.println("offsetp:"+zoffset_p+" offsetg:"+zoffset_g);
         }
         
         public void deposer(Piece piece) {
@@ -227,16 +230,19 @@ public class DemoTp4 extends Demo {
         	getCoords(posRobotAbsolu);
         	
         	
-        	removePieceDevice(piece);
+        	
        	
-        	double x = posRobotAbsolu.x + posPieceRelative.x;
-        	double y = posRobotAbsolu.y + posPieceRelative.y;
-        	double z = posRobotAbsolu.z + posPieceRelative.z;
+        	double x = posRobotAbsolu.x + posPieceRelative.x*(int) Math.signum(posRobotAbsolu.x);
+        	double y = posRobotAbsolu.y;// + posPieceRelative.y;
+        	double z = posRobotAbsolu.z + posPieceRelative.z*(int) Math.signum(posRobotAbsolu.z);
         	System.out.println(posRobotAbsolu.x+" "+posRobotAbsolu.y+" "+posRobotAbsolu.z);
         	System.out.println(posPieceRelative.x+" "+posPieceRelative.y+" "+posPieceRelative.z);
         	System.out.println(x+" "+y+" "+z);
+        	
+        	removePieceDevice(piece);
         	piece.moveToPosition(new Vector3d(x,y,z));
         	demo.add(piece);
+        	piece.attach();
         	
         }
     
@@ -375,7 +381,7 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 1:
-					if(roulerPendantDistance(1.5)) {
+					if(roulerPendantDistance(1)) {
 						internalState++;
 					}
 				break;
@@ -398,7 +404,7 @@ public class DemoTp4 extends Demo {
 					}
 				break;
 				case 1:
-					if(roulerPendantDistance(1.5)) {
+					if(roulerPendantDistance(1)) {
 						internalState++;
 					}
 				break;
@@ -516,12 +522,13 @@ public class DemoTp4 extends Demo {
 
 		private void rechercherPiece() {
 			suiviDeLigne();
+			
 			double d = rangeSensor.getFrontQuadrantMeasurement();
 			System.out.println(d);
 			if(petit_sac.size() == 0 && d < 1) {
 				internalState = 0;
 				etat = RAMASSE;
-			} else if(d <= 1.7) {
+			} else if(restePetit && d < zoffset_p + 0.2) { //Ramassage des grosses pièces quand on a deja 3 petites pieces, offset_p deja calculé
 				internalState = 0;
 				etat = RAMASSE;
 			}

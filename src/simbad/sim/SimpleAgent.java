@@ -178,7 +178,7 @@ public  class SimpleAgent extends BaseObject {
     
     protected  void resetPositionAt(Vector3d newPosition){
         // reattach to graph if necessary
-        if (detachedFromSceneGraph) attach();
+       // if (detachedFromSceneGraph) attach();
         resetTransforms();
         collisionDetected =false;
         interactionDetected=false;
@@ -445,16 +445,19 @@ public  class SimpleAgent extends BaseObject {
 	 */
 	protected int addPieceDevice(Piece p,Vector3d position,double angle){
 		if(!boxes.contains(p)) {
+			
+			removePieceDevice(p);
+			
 		    boxes.add(p);
-		    //sd.setOwner(this);
-		    Vector3d pos = new Vector3d();
-		    for(Piece pi:boxes){
-		    	//pos.  += pi.translation
-		    }
-		    p.translateTo(position);
+
+		    addChild(p);
+		    
+		    //p.translateTo(position);
+		    p.moveToPosition(position);
 	        p.rotateY((float)angle);
 	        
-	        addChild(p);
+	        
+	        
 	        return boxes.size()-1;
 		} else {
 			return boxes.indexOf(p);
