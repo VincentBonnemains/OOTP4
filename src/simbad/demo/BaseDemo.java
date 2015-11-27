@@ -35,7 +35,7 @@ public class BaseDemo extends Demo {
         public Robot (Vector3d position, String name) {     
             super(position,name);
             // Add sensors
-            camera = RobotFactory.addCameraSensor(this);
+            camera = RobotFactory.addFrontCameraSensor(this);
             RobotFactory.addBumperBeltSensor(this);
            // Add sonars and get corresponding object.
            sonars  = RobotFactory.addSonarBeltSensor(this);

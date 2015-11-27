@@ -43,7 +43,7 @@ public class RobotFactory extends Factory {
      * @param agent
      * @return the sensor object
      */
-    /*static public CameraSensor addCameraSensor(Agent agent) {
+    static public CameraSensor addCameraSensor(Agent agent) {
         double agentHeight = agent.getHeight();
         float cameraBodyRadius = 0.1f;
         CameraSensor camera = new CameraSensor(cameraBodyRadius, 100, 100);
@@ -53,8 +53,8 @@ public class RobotFactory extends Factory {
                 + (cameraBodyRadius * 3) / 4, 0);
         agent.addSensorDevice(camera, pos, 0);
         return camera;
-    }*/
-	static public CameraSensor addCameraSensor(Agent agent) {
+    }
+	static public CameraSensor addFrontCameraSensor(Agent agent) {
         double agentHeight = agent.getHeight();
         float cameraBodyRadius = 0.06f;
         CameraSensor camera = new CameraSensor(cameraBodyRadius, 100, 100);
@@ -62,6 +62,19 @@ public class RobotFactory extends Factory {
         camera.setName("Camera");
         camera.rotateX(3*Math.PI/2);
         Vector3d pos = new Vector3d(0.3, (agentHeight / 4), 0);
+        agent.addSensorDevice(camera, pos, 0);
+        return camera;
+    }
+	
+	static public CameraSensor addBackCameraSensor(Agent agent) {
+        double agentHeight = agent.getHeight();
+        float cameraBodyRadius = 0.06f;
+        CameraSensor camera = new CameraSensor(cameraBodyRadius, 100, 100);
+        camera.setUpdatePerSecond(30);
+        camera.setName("Camera");
+        camera.rotateY(Math.PI);
+        //camera.rotateX(3*Math.PI/2);
+        Vector3d pos = new Vector3d(-0.3, (agentHeight / 4), 0);
         agent.addSensorDevice(camera, pos, 0);
         return camera;
     }
