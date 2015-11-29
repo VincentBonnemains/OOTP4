@@ -41,6 +41,7 @@ import javax.vecmath.Point3d;
 import javax.vecmath.Vector3d;
 import javax.vecmath.Vector3f;
 
+import simbad.gui.AgentInspector;
 import simbad.sim.Agent;
 import simbad.sim.Box;
 import simbad.sim.CameraSensor;
@@ -70,7 +71,7 @@ public class DemoTp4 extends Demo {
 		 * ATTRIBUTES ******************************************
 		 *******************************************************/
 		private RobotUtils utils;
-		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3,ROUGE = 4,BLEU = 5;
+		final int GAUCHE=0,DROITE=1,NOIR=0,VERT=1,BLANC=2,JAUNE=3,ROUGE = 4, BLEU = 5,GRIS=6;
 		int compteurPivotGauche=0,compteurPivotDroit=0;
 		double elapsed;
 
@@ -78,32 +79,29 @@ public class DemoTp4 extends Demo {
 		ArrayList<Piece> petit_sac = new ArrayList<Piece>();
 		ArrayList<Piece> gros_sac  = new ArrayList<Piece>();
         double tic = 0.01,tac=0;
-		
+        double xoffset_p;
+        double xoffset_g;
 
 		double ANGLE = 0;
-		double nbPiecesPortees = 0;
 		public double VMAX = 1.4;
 		double VMIN = 0.2;
 		double VITESSE = VMAX;
 		double compteurblanc = 0.0;
     	double coef = 8;
     	int sens = 1;
-    	public int nbColors = 6;
-    	int nbCameraSensors = 3;
-		boolean frontColors[] = new boolean[nbColors];
-		int ramassage = 0,depot = 0;
-		ArrayList<Piece> enRamassage = new ArrayList<Piece>();
-    	ArrayList<boolean[]> COULEURS = new ArrayList<boolean[]>();
+    	public int nbColors = 7;
+
+    	boolean frontColors[] = new boolean[nbColors];
+		boolean backColors[]  = new boolean[nbColors];
+		int ramassage = 0,depot = 0,etapRamassage = 0;
 		public boolean retrouverChemin = false;
 		
-		CameraSensor[] sensors = new CameraSensor[nbCameraSensors];
-		public CameraSensor frontSensor;
+		public CameraSensor frontSensor,backSensor;
 		
-		public BufferedImage[] bufferedMatrices = new BufferedImage[nbCameraSensors];
-		public BufferedImage frontMatrix;
+		public BufferedImage frontMatrix,backMatrix;
 		RangeSensorBelt rangeSensor;
 				
-		JPanel panel;
+		JPanel frontSensorPanel,backSensorPanel;
         JInternalFrame window;
         
         DemoTp4 demo;
@@ -117,18 +115,28 @@ public class DemoTp4 extends Demo {
             this.demo = demo;
             utils = new RobotUtils(this);
             //sensors = RobotFactory.addCameraBeltSensor(this,sensors);
-            frontSensor = RobotFactory.addCameraSensor(this);
+            backSensor  = RobotFactory.addBackCameraSensor(this);
+            frontSensor = RobotFactory.addFrontCameraSensor(this);
             rangeSensor = RobotFactory.addSonarBeltSensor(this);
             this.position = new Point3d();
             this.current_position = new Point3d();
             // prepare a buffer for storing image
             frontMatrix = frontSensor.createCompatibleImage();
+            backMatrix  = backSensor.createCompatibleImage();
+           
             // Prepare UI panel for image display
-            panel = new ImagerPanel(this);
+            frontSensorPanel = new ImagerPanel(this);
             Dimension dim = new Dimension(frontMatrix.getWidth(),frontMatrix.getHeight());
-            panel.setPreferredSize(dim);
-            panel.setMinimumSize(dim);
-            setUIPanel(panel);
+            frontSensorPanel.setPreferredSize(dim);
+            frontSensorPanel.setMinimumSize(dim);
+           
+            setUIPanel(frontSensorPanel);
+           
+         // Prepare UI panel for image display
+          //  backSensorPanel = new ImagerBackSensorPanel(this);
+        //    backSensorPanel .setPreferredSize(dim);
+         //   backSensorPanel .setMinimumSize(dim);
+           // setUIPanel(backSensorPanel);
             
             //Machine a etat variable
             this.etat = REPOSTOCHEMIN;
@@ -137,9 +145,6 @@ public class DemoTp4 extends Demo {
     		this.restePetit = true;
     		this.aRamasse = false;
     		this.plein = false;
-    		boolean t[] = new boolean[nbColors];
-    		for(int i=0;i<nbColors;i++)
-    			COULEURS.add(t);
         }         
         
 
@@ -158,12 +163,17 @@ public class DemoTp4 extends Demo {
             if (tac >= tic) {            	
 	            getCoords(current_position);
 				machineAEtat();
-            	setTranslationalVelocity(VITESSE*(1-nbPiecesPortees*0.05));
+            	setTranslationalVelocity(VITESSE*(1-ramassage*0.05));
 	            setRotationalVelocity(ANGLE);
 	            /* Mettre à jour les capteurs */
             	frontSensor.copyVisionImage(frontMatrix);
-            	frontColors = utils.colorsDetected(frontMatrix);
-            	panel.repaint();
+            	frontColors = utils.colorsDetectedFront(frontMatrix);
+            	frontSensorPanel.repaint();
+            	
+            	backSensor.copyVisionImage(backMatrix);
+            	backColors = utils.colorsDetectedBack(backMatrix);
+            	
+            	/*backSensorPanel.repaint();*/
             	/* ***************************** */
             	getCoords(position);
             	elapsed = getLifeTime();
@@ -194,36 +204,30 @@ public class DemoTp4 extends Demo {
         	compteurblanc += tic;
         }
         
-        double zoffset_p;
-        double zoffset_g;        
+        
         public void ramasser(Piece piece) {     	
         	Vector3d pos;
+        	Point3d position = new Point3d();
+        	piece.getCoords(position);
         	if(piece.type == 0) {
         		petit_sac.add(piece);
-        		zoffset_p = 0.5 + petit_sac.size() * (petit_sac.get(0).getRadius()+0.1);
-	        	pos = new Vector3d(zoffset_p,0,0);
-        		/*remove(piece);
-	         	piece.detach();*/
+        		xoffset_p = 0.5 + petit_sac.size() * (petit_sac.get(0).getRadius()+0.1);
+	        	pos = new Vector3d(xoffset_p,position.y-(this.getHeight()/2),0);
 	         	
 	         	addPieceDevice(piece,pos,0);
         	}
         	else {
         		gros_sac.add(piece);
         		if(petit_sac.size() == 0) {
-        			zoffset_p = 0.5;
-        			zoffset_g = gros_sac.size() * (gros_sac.get(0).getRadius()+0.1);
-        		} else {
-        			zoffset_g = (gros_sac.size()) * (gros_sac.get(0).getRadius()+0.1);
-        		}
-        		
-        		pos = new Vector3d(zoffset_p + zoffset_g,0,0); 
+        			xoffset_p = 0.5;
+        		} 
+    			xoffset_g = gros_sac.size() * (gros_sac.get(0).getRadius()+0.1);
+        		pos = new Vector3d(xoffset_p + xoffset_g,position.y-(this.getHeight()/2),0); 
              	addPieceDevice(piece,pos,0);
         	}
-        	System.out.println("offsetp:"+zoffset_p+" offsetg:"+zoffset_g);
         }
         
         public void deposer(Piece piece) {
-        	System.out.println("DEPOSER");
         	Point3d posPieceRelative = new Point3d();
         	Point3d posRobotAbsolu   = new Point3d();
         	piece.getCoords(posPieceRelative);
@@ -235,15 +239,15 @@ public class DemoTp4 extends Demo {
         	double x = posRobotAbsolu.x + posPieceRelative.x*(int) Math.signum(posRobotAbsolu.x);
         	double y = posRobotAbsolu.y;// + posPieceRelative.y;
         	double z = posRobotAbsolu.z + posPieceRelative.z*(int) Math.signum(posRobotAbsolu.z);
-        	System.out.println(posRobotAbsolu.x+" "+posRobotAbsolu.y+" "+posRobotAbsolu.z);
+        	/*System.out.println(posRobotAbsolu.x+" "+posRobotAbsolu.y+" "+posRobotAbsolu.z);
         	System.out.println(posPieceRelative.x+" "+posPieceRelative.y+" "+posPieceRelative.z);
-        	System.out.println(x+" "+y+" "+z);
+        	System.out.println(x+" "+y+" "+z);*/
         	
         	removePieceDevice(piece);
-        	piece.moveToPosition(new Vector3d(x,y,z));
+        	piece.moveToPosition(new Vector3d(x,0,z));
         	demo.add(piece);
         	piece.attach();
-        	
+        	ramassage--;        	
         }
     
 		/******************************************************************************************************************************
@@ -303,9 +307,31 @@ public class DemoTp4 extends Demo {
 
 		private void depose() {			
 			switch(internalState){
+				//DESCENTE
 				case 0:
 					plein = false;
 					VITESSE = 0;
+					if(etapRamassage <= 8){
+						if(petit_sac.size() != 0){
+							for(Piece p:petit_sac){
+								p.translateTo(new Vector3d(0,-0.1,0));
+							}
+							for(Piece p:gros_sac)
+								p.translateTo(new Vector3d(0,-0.1,0));
+						}
+						else{
+							for(Piece p:gros_sac){
+								p.translateTo(new Vector3d(0,-0.1,0));
+							}
+						}
+						++etapRamassage;
+					}
+					else{
+						etapRamassage = 0;
+						internalState++;
+					}
+				break;
+				case 1:
 					if(petit_sac.size() > 0) {
 						for(Piece p:petit_sac)	deposer(p);
 						petit_sac.clear();
@@ -315,11 +341,22 @@ public class DemoTp4 extends Demo {
 					}
 					internalState++;
 				break;
-				case 1:
+				case 2:
+					if(etapRamassage <= 8){
+						for(Piece p:gros_sac)
+							p.translateTo(new Vector3d(0,0.1,0));
+						etapRamassage++;
+					}
+					else{
+						etapRamassage = 0;
+						internalState++;
+					}
+				break;
+				case 3:
 					if(pivoter(Math.PI))
 						internalState++;
 					break;
-				case 2:
+				case 4:
 					plein = false;
 					internalState = 0;
 					etat = RECHERCHEREPOS;
@@ -455,16 +492,59 @@ public class DemoTp4 extends Demo {
 
 
 		private void ramasse() {
-			System.out.println("Devant: " + rangeSensor.getFrontQuadrantMeasurement());
 			VITESSE = 0;
+			Random rand = new Random();
+			int j;
 			switch(internalState){
+				//depot
 				case 0:
+					if((ramassePetitouGrand == 1) && etapRamassage <= 8){
+						for(Piece p:petit_sac){
+							p.translateTo(new Vector3d(0,-0.1,0));
+						}
+						++etapRamassage;
+					}
+					else{
+						etapRamassage = 0;
+						internalState++;
+					}
+				break;
+				//elevation
+				case 1:
+					if(etapRamassage <= 8){
+						switch(ramassePetitouGrand){
+						case 0:
+							for(Piece p:petites_pieces){
+								p.translateTo(new Vector3d(0,0.1,0));
+							}
+							break;
+						case 1:
+							if(etapRamassage == 0){
+								j = (rand.nextInt(3))+1;
+								if(j > grandes_pieces.size())
+									j = grandes_pieces.size();
+								for(int i =0;i < j;++i)
+									gros_sac.add(grandes_pieces.get(i));
+							}
+							for(Piece p:gros_sac){
+								p.translateTo(new Vector3d(0,0.1,0));
+							}
+							for(Piece p:petit_sac)
+								p.translateTo(new Vector3d(0,0.1,0));
+							break;
+						}
+						etapRamassage++;
+					}
+					else{
+						etapRamassage = 0;
+						internalState++;
+					}
+				break;
+				case 2:
 					aRamasse = true;
 					if(ramassePetitouGrand == 1) {
 						plein = true;
 					}
-					
-					Random rand = new Random();
 						switch(ramassePetitouGrand){
 							case 0: //On ramasse les petites
 								for(Piece p:petites_pieces){
@@ -474,9 +554,8 @@ public class DemoTp4 extends Demo {
 								petites_pieces.clear();
 							break;
 							case 1://On ramasse les grandes								
-								int j = (rand.nextInt(3))+1;
-								if(j > grandes_pieces.size())
-									j = grandes_pieces.size();
+								j = gros_sac.size();
+								gros_sac.clear();
 								for(int i=0; i<j; i++){
 									ramasser(grandes_pieces.get(0));
 									grandes_pieces.remove(0);
@@ -489,22 +568,19 @@ public class DemoTp4 extends Demo {
 					internalState++;
 				break;
 				
-				case 1:
+				case 3:
 					if(pivoter(Math.PI)) {
-						System.out.println("Derriere: " + rangeSensor.getBackQuadrantMeasurement());
-						double d = zoffset_p + zoffset_g + 0.10;
+						//double d = zoffset_p + zoffset_g + 0.15;
 						if(ramassePetitouGrand == 1) {							
-							if(rangeSensor.getBackQuadrantMeasurement() < d)// (1.7+(grandes_pieces.size())*0.15))
+							if(backColors[GRIS] == true)
 								resteGrand = true;
 							else
 								resteGrand = false;
 							}							
 						internalState++;
-						System.out.println("resteGrand:"+resteGrand+" d:"+d);
 					}
 				break;
-				case 2:
-					ramassage = 0;
+				case 4:
 					aRamasse = true;
 					internalState = 0;
 					if(ramassePetitouGrand == 1)
@@ -525,11 +601,10 @@ public class DemoTp4 extends Demo {
 			suiviDeLigne();
 			
 			double d = rangeSensor.getFrontQuadrantMeasurement();
-			System.out.println(d);
 			if(petit_sac.size() == 0 && d < 1) {
 				internalState = 0;
 				etat = RAMASSE;
-			} else if(restePetit && d < zoffset_p + 0.2) { //Ramassage des grosses pièces quand on a deja 3 petites pieces, offset_p deja calculé
+			} else if(restePetit && d < xoffset_p + 0.2) { //Ramassage des grosses pièces quand on a deja 3 petites pieces, offset_p deja calculé
 				internalState = 0;
 				etat = RAMASSE;
 			}
@@ -603,18 +678,23 @@ public class DemoTp4 extends Demo {
 			
 			boolean[] T = frontColors;
 			
-			switch(internalState){
-				case 0: 
-					if(T[VERT]) {
+			switch(internalState) {
+				case 0:
+					if(roulerPendantDistance(2)){ //Le temps de quitter la zone
 						internalState++;
 					}
 				break;
-				case 1:
-					if(roulerPendantDistance(0.4)) {
+				case 1: 
+					if(T[VERT] || T[NOIR]) { //Vert ou noir si jamais on arrive de travers
 						internalState++;
 					}
 				break;
 				case 2:
+					if(roulerPendantDistance(0.4)) {
+						internalState++;
+					}
+				break;
+				case 3:
 					if(ramassePetitouGrand == 0){
 						if(pivoter(Math.PI/2)) {
 							internalState = 0;
@@ -655,7 +735,6 @@ public class DemoTp4 extends Demo {
 			ANGLE = angle;
 			VITESSE = 0;
 			compteur += tac;
-			//System.out.println("pivot "+(compteur >= Math.abs(angle/getRotationalVelocity()))+" "+compteur+" "+Math.abs(angle/getRotationalVelocity()));
 			if(compteur >= Math.abs(angle/getRotationalVelocity())) {
 				ANGLE = 0;
 				VITESSE = VMAX;
